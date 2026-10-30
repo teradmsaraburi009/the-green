@@ -138,10 +138,16 @@
           </button>
         </nav>
 
-        <!-- Current Date Pill -->
-        <div class="hidden lg:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg font-medium">
-          <i class="fa-regular fa-calendar-check text-brand-600"></i>
-          <span id="currentDateDisplay">วันที่ปัจจุบัน</span>
+        <!-- Current Date Pill & Cloud Sync Button -->
+        <div class="hidden lg:flex items-center gap-2">
+          <button type="button" id="cloudSyncHeaderBtn" class="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 shadow-sm" title="กดเพื่อซิงค์ข้อมูลกับคลาวด์/Google Sheets">
+            <i id="cloudSyncHeaderIcon" class="fa-solid fa-cloud-arrow-down text-emerald-600"></i>
+            <span id="cloudSyncHeaderLabel">ซิงค์ออนไลน์</span>
+          </button>
+          <div class="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg font-medium">
+            <i class="fa-regular fa-calendar-check text-brand-600"></i>
+            <span id="currentDateDisplay">วันที่ปัจจุบัน</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1160,6 +1166,58 @@
         <!-- SUB-PAGE 5: SYSTEM SETTINGS & BACKUP (ตั้งค่าระบบ/ใช้งานจริง) -->
         <!-- ======================================================= -->
         <div id="adminSubSettings" class="hidden space-y-6">
+
+          <!-- Google Sheets Cloud Database Sync Card -->
+          <div class="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl shadow-md p-5 sm:p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center justify-center text-xl shrink-0">
+                  <i class="fa-solid fa-cloud"></i>
+                </div>
+                <div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="text-base font-bold text-white">เชื่อมต่อฐานข้อมูลออนไลน์ส่วนกลาง (Google Sheets ฟรี 100%)</h3>
+                    <span id="cloudSyncStatusBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-600">โหมดในเครื่อง (ออฟไลน์)</span>
+                  </div>
+                  <p class="text-xs text-emerald-200/90 mt-0.5">แก้ปัญหาข้อมูลไม่ตรงกันระหว่างเครื่อง ด้วยการซิงค์ข้อมูลลง Google Sheets แบบเรียลไทม์ทุกเครื่อง</p>
+                </div>
+              </div>
+              <button type="button" id="openGoogleScriptModalBtn" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-code"></i>
+                <span>วิธีติดตั้งและคัดลอกโค้ด (3 นาที)</span>
+              </button>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <label for="cloudUrlInput" class="block text-xs font-semibold text-emerald-200 mb-1">
+                  URL เว็บแอป Google Apps Script (Web App URL ที่ลงท้ายด้วย /exec)
+                </label>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <div class="relative flex-1">
+                    <i class="fa-solid fa-link absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                    <input type="url" id="cloudUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full pl-9 pr-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs sm:text-sm text-white placeholder-slate-400 font-mono focus:ring-2 focus:ring-emerald-400 focus:bg-slate-900 transition-all">
+                  </div>
+                  <button type="button" id="saveCloudUrlBtn" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow transition-all flex items-center justify-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>บันทึก URL</span>
+                  </button>
+                  <button type="button" id="testCloudSyncBtn" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all flex items-center justify-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>ทดสอบดึงข้อมูล</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-300">
+                <span id="cloudLastSyncTime">การซิงค์ล่าสุด: ยังไม่เคยซิงค์</span>
+                <button type="button" id="uploadAllToCloudBtn" class="text-xs text-emerald-300 hover:text-emerald-100 underline font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                  <span>ส่งข้อมูลทั้งหมดในเครื่องนี้ขึ้น Google Sheets</span>
+                </button>
+              </div>
+            </div>
+          </div>
           
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
@@ -1509,6 +1567,64 @@
 
       <div class="flex justify-end pt-2 border-t border-slate-100">
         <button type="button" id="closeConfirmClearModalBtn" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: GOOGLE APPS SCRIPT SETUP & CODE (เชื่อมต่อ Google Sheets) -->
+  <!-- ======================================================== -->
+  <div id="googleScriptModal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+      <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-base">
+            <i class="fa-solid fa-cloud"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">วิธีเชื่อมต่อ Google Sheets ฟรี สำหรับซิงค์ข้อมูลข้ามทุกเครื่อง</h3>
+            <p class="text-xs text-slate-500">ทำตาม 4 ขั้นตอนนี้เพียงครั้งเดียว ทุกเครื่องจะเห็นข้อมูลตรงกันทันที</p>
+          </div>
+        </div>
+        <button type="button" id="closeGoogleScriptModalBtn" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-700 custom-scroll">
+        <div class="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200 font-medium">
+          <div class="font-bold text-slate-900 text-sm mb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+            <span>ขั้นตอนการติดตั้ง (ทำครั้งเดียวประมาณ 3 นาที):</span>
+          </div>
+          <p><strong>1.</strong> เปิด <a href="https://sheets.new" target="_blank" class="text-brand-600 underline font-bold">Google Sheets ใหม่ (คลิกที่นี่)</a> แล้วตั้งชื่อไฟล์ เช่น <strong>"ฐานข้อมูลค่าส่วนกลาง เดอะกรีน 2"</strong></p>
+          <p><strong>2.</strong> ที่เมนูด้านบน คลิก <strong>ส่วนขยาย (Extensions)</strong> &gt; <strong>Apps Script</strong></p>
+          <p><strong>3.</strong> ลบโค้ดเดิมในหน้านั้นออกทั้งหมด แล้วกดปุ่ม <strong>"คัดลอกโค้ดทั้งหมด"</strong> ด้านล่างนี้ไปวางแทนที่ จากนั้นกดปุ่ม <strong>บันทึก (รูปแผ่นดิสก์)</strong></p>
+          <p><strong>4.</strong> กดปุ่มสีน้ำเงินมุมขวาบน <strong>การทำให้ใช้งานได้ (Deploy)</strong> &gt; <strong>การทำให้ใช้งานได้ใหม่ (New deployment)</strong>
+            <br>&nbsp;&nbsp;&bull; คลิกรูปฟันเฟืองเลือกประเภท <strong>เว็บแอป (Web app)</strong>
+            <br>&nbsp;&nbsp;&bull; ดำเนินการในฐานะ (Execute as): <strong>"ฉัน" (Me)</strong>
+            <br>&nbsp;&nbsp;&bull; ผู้ที่มีสิทธิ์เข้าถึง (Who has access): <strong>"ทุกคน" (Anyone)</strong> <span class="text-red-600 font-bold">**สำคัญมาก ต้องเลือกทุกคน**</span>
+            <br>&nbsp;&nbsp;&bull; กด <strong>ทำให้ใช้งานได้ (Deploy)</strong> แล้วอนุญาตสิทธิ์ (Authorize access)
+            <br>&nbsp;&nbsp;&bull; คัดลอก <strong>URL เว็บแอป</strong> ที่ลงท้ายด้วย <code>/exec</code> นำมาวางในช่อง URL ในแอปนี้ แล้วกด <strong>บันทึก URL</strong>
+          </p>
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-800">โค้ด Google Apps Script (Code.gs):</span>
+            <button type="button" id="copyScriptCodeBtn" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i>
+              <span>คัดลอกโค้ดทั้งหมด</span>
+            </button>
+          </div>
+          <textarea id="scriptCodeTextarea" readonly class="w-full h-44 p-3 bg-slate-900 text-emerald-400 font-mono text-[11px] rounded-xl border border-slate-800 focus:outline-none custom-scroll select-all"></textarea>
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button type="button" id="doneGoogleScriptModalBtn" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors">
           ปิดหน้าต่าง
         </button>
       </div>
@@ -2327,6 +2443,7 @@
 
         appState.payments.unshift(newRecord);
         saveState();
+        pushPaymentToCloud(newRecord);
         populateHouseDropdown();
         updateAdminBadges();
 
@@ -2882,6 +2999,7 @@
 
         item.status = newStatus;
         saveState();
+        pushSlipStatusToCloud(id, newStatus);
 
         if (newStatus === 'approved') {
           showToast(`อนุมัติการชำระเงินของบ้าน ${item.houseNo} เรียบร้อยแล้ว (ออกใบเสร็จ ${item.receiptNo})`, 'success');
@@ -3154,6 +3272,7 @@
           }
 
           saveState();
+          pushHousesToCloud();
           populateHouseDropdown();
           renderHousesDirectory();
           refreshAdminOverviewStats();
@@ -3454,6 +3573,273 @@
           showToast('บันทึกรหัสผ่านผู้ดูแลระบบใหม่เรียบร้อยแล้ว');
         });
       }
+
+      // Cloud Database Sync Logic (Google Sheets Integration)
+      const cloudSyncHeaderBtn = document.getElementById('cloudSyncHeaderBtn');
+      const cloudSyncHeaderIcon = document.getElementById('cloudSyncHeaderIcon');
+      const cloudSyncHeaderLabel = document.getElementById('cloudSyncHeaderLabel');
+      const cloudUrlInput = document.getElementById('cloudUrlInput');
+      const saveCloudUrlBtn = document.getElementById('saveCloudUrlBtn');
+      const testCloudSyncBtn = document.getElementById('testCloudSyncBtn');
+      const uploadAllToCloudBtn = document.getElementById('uploadAllToCloudBtn');
+      const cloudSyncStatusBadge = document.getElementById('cloudSyncStatusBadge');
+      const cloudLastSyncTime = document.getElementById('cloudLastSyncTime');
+
+      const openGoogleScriptModalBtn = document.getElementById('openGoogleScriptModalBtn');
+      const closeGoogleScriptModalBtn = document.getElementById('closeGoogleScriptModalBtn');
+      const doneGoogleScriptModalBtn = document.getElementById('doneGoogleScriptModalBtn');
+      const googleScriptModal = document.getElementById('googleScriptModal');
+      const copyScriptCodeBtn = document.getElementById('copyScriptCodeBtn');
+      const scriptCodeTextarea = document.getElementById('scriptCodeTextarea');
+
+      // Embedded Google Apps Script code for 1-click copy
+      const GOOGLE_APPS_SCRIPT_CODE = '/**\n * =========================================================================\n * สคริปต์เชื่อมต่อฐานข้อมูล Google Sheets สำหรับระบบค่าส่วนกลาง หมู่บ้านเดอะกรีน 2\n * นิติบุคคลหมู่บ้านจัดสรร เดอะกรีน 2 (The Green 2 Village)\n * พัฒนาโดย: นายศุภฤกษ์ เรืองไทย\n * =========================================================================\n * \n * วิธีใช้งาน (ทำครั้งเดียว 3 นาที):\n * 1. เปิด Google Sheets ใหม่ (https://sheets.new) ตั้งชื่อว่า "ฐานข้อมูลค่าส่วนกลาง เดอะกรีน 2"\n * 2. ไปที่เมนู "ส่วนขยาย" (Extensions) > "Apps Script"\n * 3. ลบโค้ดเดิมทั้งหมดออก แล้ววางโค้ดในไฟล์นี้ลงไปแทนที่ จากนั้นกดปุ่ม "บันทึก" (Save)\n * 4. กดปุ่มสีน้ำเงินมุมขวาบน "การทำให้ใช้งานได้" (Deploy) > "การทำให้ใช้งานได้ใหม่" (New deployment)\n * 5. คลิกรูปฟันเฟืองเลือกประเภท "เว็บแอป" (Web app)\n *    - คำอธิบาย: ระบบค่าส่วนกลางเดอะกรีน 2\n *    - ดำเนินการในฐานะ (Execute as): "ฉัน" (Me - อีเมลของคุณ)\n *    - ผู้ที่มีสิทธิ์เข้าถึง (Who has access): "ทุกคน" (Anyone) **สำคัญมาก ต้องเลือกทุกคน**\n * 6. กด "ทำให้ใช้งานได้" (Deploy) แล้วอนุญาตสิทธิ์ (Authorize access)\n * 7. คัดลอก "URL เว็บแอป" (ลงท้ายด้วย /exec) นำไปใส่ในหน้า "ตั้งค่าระบบ / สำรองข้อมูล" ในแอป\n */\n\nfunction doGet(e) {\n  var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : \'getData\';\n  var ss = SpreadsheetApp.getActiveSpreadsheet();\n  ensureSheets(ss);\n\n  if (action === \'getData\') {\n    var data = getAllData(ss);\n    return createJsonResponse({ \n      status: \'success\', \n      village: \'หมู่บ้านจัดสรร เดอะกรีน 2\',\n      houses: data.houses, \n      payments: data.payments,\n      updatedAt: new Date().toISOString()\n    });\n  }\n\n  return createJsonResponse({ status: \'success\', message: \'The Green 2 Village API is Active\' });\n}\n\nfunction doPost(e) {\n  var ss = SpreadsheetApp.getActiveSpreadsheet();\n  ensureSheets(ss);\n\n  try {\n    var contents = e.postData.contents;\n    var data = JSON.parse(contents);\n    var action = data.action;\n\n    if (action === \'createPayment\') {\n      addPaymentRow(ss, data.payment);\n      return createJsonResponse({ status: \'success\', message: \'Payment recorded successfully\' });\n    } else if (action === \'updateSlipStatus\') {\n      updatePaymentStatusInSheet(ss, data.id, data.status);\n      return createJsonResponse({ status: \'success\', message: \'Slip status updated\' });\n    } else if (action === \'saveHouses\') {\n      saveHousesToSheet(ss, data.houses);\n      return createJsonResponse({ status: \'success\', message: \'Houses list updated\' });\n    } else if (action === \'syncAll\') {\n      if (data.houses && data.houses.length > 0) saveHousesToSheet(ss, data.houses);\n      if (data.payments && data.payments.length > 0) savePaymentsToSheet(ss, data.payments);\n      return createJsonResponse({ status: \'success\', message: \'All database synchronized\' });\n    }\n\n    return createJsonResponse({ status: \'error\', message: \'Unknown action: \' + action });\n  } catch (err) {\n    return createJsonResponse({ status: \'error\', message: err.toString() });\n  }\n}\n\nfunction createJsonResponse(obj) {\n  return ContentService.createTextOutput(JSON.stringify(obj))\n    .setMimeType(ContentService.MimeType.JSON);\n}\n\nfunction ensureSheets(ss) {\n  var pSheet = ss.getSheetByName(\'Payments\');\n  if (!pSheet) {\n    pSheet = ss.insertSheet(\'Payments\');\n    pSheet.appendRow([\n      \'รหัสรายการ\', \n      \'เลขที่ใบเสร็จ\', \n      \'บ้านเลขที่\', \n      \'ชื่อผู้ชำระ\', \n      \'ประเภทการชำระ\', \n      \'งวดเดือน\', \n      \'งวดปี (พ.ศ.)\', \n      \'วันที่โอน\', \n      \'ค่าส่วนกลางปกติ (บาท)\', \n      \'ค่าบัตรผ่านประตู (บาท)\', \n      \'ค่าปรับล่าช้า (บาท)\', \n      \'ยอดรวมสุทธิ (บาท)\', \n      \'สถานะ\', \n      \'หมายเหตุ\', \n      \'เวลาที่บันทึก\', \n      \'สลิป (Base64)\'\n    ]);\n    pSheet.getRange(1, 1, 1, 16).setBackground(\'#166534\').setFontColor(\'#ffffff\').setFontWeight(\'bold\');\n    pSheet.setFrozenRows(1);\n  }\n\n  var hSheet = ss.getSheetByName(\'Houses\');\n  if (!hSheet) {\n    hSheet = ss.insertSheet(\'Houses\');\n    hSheet.appendRow([\'บ้านเลขที่\', \'เจ้าของ/ผู้พักอาศัย\', \'เบอร์โทรศัพท์\']);\n    hSheet.getRange(1, 1, 1, 3).setBackground(\'#0f172a\').setFontColor(\'#ffffff\').setFontWeight(\'bold\');\n    hSheet.setFrozenRows(1);\n    \n    // ตั้งค่าบ้านเริ่มต้น 88/1 - 88/25\n    var initial = [];\n    for (var i = 1; i <= 25; i++) {\n      initial.push([\'88/\' + i, \'\', \'\']);\n    }\n    hSheet.getRange(2, 1, initial.length, 3).setValues(initial);\n  }\n}\n\nfunction getAllData(ss) {\n  var pSheet = ss.getSheetByName(\'Payments\');\n  var hSheet = ss.getSheetByName(\'Houses\');\n\n  var payments = [];\n  if (pSheet && pSheet.getLastRow() > 1) {\n    var pRows = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, 16).getValues();\n    for (var i = pRows.length - 1; i >= 0; i--) {\n      var r = pRows[i];\n      if (!r[0]) continue;\n      payments.push({\n        id: String(r[0]),\n        receiptNo: String(r[1]),\n        houseNo: String(r[2]),\n        ownerName: String(r[3]),\n        paymentType: String(r[4]),\n        periodMonth: Number(r[5]) || 1,\n        periodYear: Number(r[6]) || 2026,\n        paymentDate: formatDate(r[7]),\n        baseFee: Number(r[8]) || 0,\n        gateCardFee: Number(r[9]) || 0,\n        gateCardQty: Number(r[9]) > 0 ? Math.round(Number(r[9]) / 200) : 0,\n        lateFee: Number(r[10]) || 0,\n        totalAmount: Number(r[11]) || 0,\n        status: String(r[12]) || \'pending\',\n        note: String(r[13] || \'\'),\n        createdAt: String(r[14] || \'\'),\n        slipData: String(r[15] || \'\')\n      });\n    }\n  }\n\n  var houses = [];\n  if (hSheet && hSheet.getLastRow() > 1) {\n    var hRows = hSheet.getRange(2, 1, hSheet.getLastRow() - 1, 3).getValues();\n    for (var j = 0; j < hRows.length; j++) {\n      var h = hRows[j];\n      if (!h[0]) continue;\n      houses.push({\n        id: String(h[0]),\n        houseNo: String(h[0]),\n        ownerName: String(h[1] || \'\'),\n        phone: String(h[2] || \'\')\n      });\n    }\n  }\n\n  return { houses: houses, payments: payments };\n}\n\nfunction addPaymentRow(ss, p) {\n  var sheet = ss.getSheetByName(\'Payments\');\n  sheet.appendRow([\n    p.id,\n    p.receiptNo,\n    p.houseNo,\n    p.ownerName,\n    p.paymentType,\n    p.periodMonth,\n    p.periodYear,\n    p.paymentDate,\n    p.baseFee || 0,\n    p.gateCardFee || 0,\n    p.lateFee || 0,\n    p.totalAmount || 0,\n    p.status || \'pending\',\n    p.note || \'\',\n    p.createdAt || new Date().toISOString(),\n    p.slipData || \'\'\n  ]);\n}\n\nfunction updatePaymentStatusInSheet(ss, id, newStatus) {\n  var sheet = ss.getSheetByName(\'Payments\');\n  var lastRow = sheet.getLastRow();\n  if (lastRow <= 1) return;\n  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();\n  for (var i = 0; i < ids.length; i++) {\n    if (String(ids[i][0]) === String(id)) {\n      sheet.getRange(i + 2, 13).setValue(newStatus);\n      break;\n    }\n  }\n}\n\nfunction saveHousesToSheet(ss, houses) {\n  var sheet = ss.getSheetByName(\'Houses\');\n  sheet.clearContents();\n  sheet.appendRow([\'บ้านเลขที่\', \'เจ้าของ/ผู้พักอาศัย\', \'เบอร์โทรศัพท์\']);\n  sheet.getRange(1, 1, 1, 3).setBackground(\'#0f172a\').setFontColor(\'#ffffff\').setFontWeight(\'bold\');\n  sheet.setFrozenRows(1);\n  if (houses && houses.length > 0) {\n    var rows = houses.map(function(h) { \n      return [h.houseNo, h.ownerName || \'\', h.phone || \'\']; \n    });\n    sheet.getRange(2, 1, rows.length, 3).setValues(rows);\n  }\n}\n\nfunction savePaymentsToSheet(ss, payments) {\n  var sheet = ss.getSheetByName(\'Payments\');\n  sheet.clearContents();\n  sheet.appendRow([\n    \'รหัสรายการ\', \'เลขที่ใบเสร็จ\', \'บ้านเลขที่\', \'ชื่อผู้ชำระ\', \'ประเภทการชำระ\', \n    \'งวดเดือน\', \'งวดปี (พ.ศ.)\', \'วันที่โอน\', \'ค่าส่วนกลางปกติ (บาท)\', \'ค่าบัตรผ่านประตู (บาท)\', \n    \'ค่าปรับล่าช้า (บาท)\', \'ยอดรวมสุทธิ (บาท)\', \'สถานะ\', \'หมายเหตุ\', \'เวลาที่บันทึก\', \'สลิป (Base64)\'\n  ]);\n  sheet.getRange(1, 1, 1, 16).setBackground(\'#166534\').setFontColor(\'#ffffff\').setFontWeight(\'bold\');\n  sheet.setFrozenRows(1);\n  if (payments && payments.length > 0) {\n    var rows = payments.map(function(p) {\n      return [\n        p.id, p.receiptNo, p.houseNo, p.ownerName, p.paymentType,\n        p.periodMonth, p.periodYear, p.paymentDate, p.baseFee || 0,\n        p.gateCardFee || 0, p.lateFee || 0, p.totalAmount || 0,\n        p.status || \'pending\', p.note || \'\', p.createdAt || \'\', p.slipData || \'\'\n      ];\n    });\n    sheet.getRange(2, 1, rows.length, 16).setValues(rows);\n  }\n}\n\nfunction formatDate(val) {\n  if (!val) return \'\';\n  if (val instanceof Date) {\n    var y = val.getFullYear();\n    var m = (\'0\' + (val.getMonth() + 1)).slice(-2);\n    var d = (\'0\' + val.getDate()).slice(-2);\n    return y + \'-\' + m + \'-\' + d;\n  }\n  return String(val);\n}\n';
+
+      if (scriptCodeTextarea) {
+        scriptCodeTextarea.value = GOOGLE_APPS_SCRIPT_CODE;
+      }
+
+      if (openGoogleScriptModalBtn && googleScriptModal) {
+        openGoogleScriptModalBtn.addEventListener('click', () => {
+          googleScriptModal.classList.remove('hidden');
+          googleScriptModal.classList.add('flex');
+        });
+      }
+
+      function closeGoogleScriptModal() {
+        if (googleScriptModal) {
+          googleScriptModal.classList.add('hidden');
+          googleScriptModal.classList.remove('flex');
+        }
+      }
+
+      if (closeGoogleScriptModalBtn) closeGoogleScriptModalBtn.addEventListener('click', closeGoogleScriptModal);
+      if (doneGoogleScriptModalBtn) doneGoogleScriptModalBtn.addEventListener('click', closeGoogleScriptModal);
+      if (googleScriptModal) {
+        googleScriptModal.addEventListener('click', (e) => {
+          if (e.target === googleScriptModal) closeGoogleScriptModal();
+        });
+      }
+
+      if (copyScriptCodeBtn && scriptCodeTextarea) {
+        copyScriptCodeBtn.addEventListener('click', () => {
+          scriptCodeTextarea.select();
+          try {
+            navigator.clipboard.writeText(scriptCodeTextarea.value).then(() => {
+              showToast('คัดลอกโค้ด Google Apps Script เรียบร้อยแล้ว');
+            }).catch(() => {
+              document.execCommand('copy');
+              showToast('คัดลอกโค้ด Google Apps Script เรียบร้อยแล้ว');
+            });
+          } catch (err) {
+            document.execCommand('copy');
+            showToast('คัดลอกโค้ด Google Apps Script เรียบร้อยแล้ว');
+          }
+        });
+      }
+
+      function updateCloudSyncUI() {
+        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        if (cloudUrlInput) cloudUrlInput.value = url;
+        if (url) {
+          if (cloudSyncStatusBadge) {
+            cloudSyncStatusBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30';
+            cloudSyncStatusBadge.textContent = 'เชื่อมต่อ Google Sheets แล้ว (ออนไลน์)';
+          }
+          if (cloudSyncHeaderBtn) {
+            cloudSyncHeaderBtn.className = 'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-sm';
+            if (cloudSyncHeaderLabel) cloudSyncHeaderLabel.textContent = 'ซิงค์คลาวด์';
+          }
+        } else {
+          if (cloudSyncStatusBadge) {
+            cloudSyncStatusBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-600';
+            cloudSyncStatusBadge.textContent = 'โหมดในเครื่อง (ยังไม่เชื่อมคลาวด์)';
+          }
+          if (cloudSyncHeaderBtn) {
+            cloudSyncHeaderBtn.className = 'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 shadow-sm';
+            if (cloudSyncHeaderLabel) cloudSyncHeaderLabel.textContent = 'เชื่อมต่อคลาวด์';
+          }
+        }
+      }
+
+      if (saveCloudUrlBtn && cloudUrlInput) {
+        saveCloudUrlBtn.addEventListener('click', () => {
+          const val = cloudUrlInput.value.trim();
+          appState.settings = appState.settings || {};
+          appState.settings.cloudUrl = val;
+          saveState();
+          updateCloudSyncUI();
+          if (val) {
+            showToast('บันทึก URL คลาวด์เรียบร้อย กำลังเริ่มทดสอบดึงข้อมูล...');
+            fetchDataFromCloud(false);
+          } else {
+            showToast('ลบการเชื่อมต่อคลาวด์แล้ว ระบบจะใช้ความจำในเครื่อง');
+          }
+        });
+      }
+
+      if (testCloudSyncBtn) {
+        testCloudSyncBtn.addEventListener('click', () => {
+          const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+          if (!url) {
+            showToast('กรุณาระบุ URL เว็บแอป Google Apps Script ก่อนทดสอบ', 'warning');
+            return;
+          }
+          fetchDataFromCloud(false);
+        });
+      }
+
+      if (cloudSyncHeaderBtn) {
+        cloudSyncHeaderBtn.addEventListener('click', () => {
+          const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+          if (!url) {
+            switchView('admin');
+            if (appState.isAdminLoggedIn) {
+              switchAdminSubTab('settings');
+            }
+            showToast('กรุณาระบุ URL Google Apps Script ในหน้าตั้งค่าเพื่อเปิดระบบออนไลน์', 'warning');
+            return;
+          }
+          fetchDataFromCloud(false);
+        });
+      }
+
+      function fetchDataFromCloud(silent = false) {
+        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        if (!url) return;
+
+        if (cloudSyncHeaderIcon) cloudSyncHeaderIcon.classList.add('fa-spin');
+
+        const fetchUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'action=getData&_t=' + Date.now();
+
+        fetch(fetchUrl)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.status === 'success') {
+              let updatedHouses = false;
+              let updatedPayments = false;
+
+              if (Array.isArray(data.houses) && data.houses.length > 0) {
+                appState.houses = data.houses;
+                updatedHouses = true;
+              }
+              if (Array.isArray(data.payments)) {
+                appState.payments = data.payments;
+                updatedPayments = true;
+              }
+
+              saveState();
+              populateHouseDropdown();
+              renderHousesDirectory();
+              renderSlipsTable();
+              refreshAdminOverviewStats();
+              renderReportView();
+
+              const nowTime = new Date().toLocaleTimeString('th-TH');
+              if (cloudLastSyncTime) {
+                cloudLastSyncTime.textContent = `การซิงค์ล่าสุด: วันนี้เวลา ${nowTime} (${appState.houses.length} หลัง, ${appState.payments.length} รายการ)`;
+              }
+
+              if (!silent) {
+                showToast(`ซิงค์ข้อมูลกับ Google Sheets สำเร็จ! (พบ ${appState.payments.length} รายการ)`, 'success');
+              }
+            } else {
+              if (!silent) {
+                showToast('คลาวด์ส่งค่ากลับไม่ถูกต้อง กรุณาตรวจสอบ Apps Script', 'warning');
+              }
+            }
+          })
+          .catch(err => {
+            console.warn('Cloud sync fetch error:', err);
+            if (!silent) {
+              showToast('ไม่สามารถเชื่อมต่อ Google Sheets ได้ ตรวจสอบ URL หรืออินเทอร์เน็ต', 'error');
+            }
+          })
+          .finally(() => {
+            if (cloudSyncHeaderIcon) cloudSyncHeaderIcon.classList.remove('fa-spin');
+          });
+      }
+
+      function pushPaymentToCloud(payment) {
+        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        if (!url) return;
+
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'createPayment',
+            payment: payment
+          })
+        }).catch(err => console.warn('Push payment error:', err));
+      }
+
+      function pushSlipStatusToCloud(id, newStatus) {
+        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        if (!url) return;
+
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'updateSlipStatus',
+            id: id,
+            status: newStatus
+          })
+        }).catch(err => console.warn('Push slip status error:', err));
+      }
+
+      function pushHousesToCloud() {
+        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        if (!url) return;
+
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'saveHouses',
+            houses: appState.houses
+          })
+        }).catch(err => console.warn('Push houses error:', err));
+      }
+
+      if (uploadAllToCloudBtn) {
+        uploadAllToCloudBtn.addEventListener('click', () => {
+          const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+          if (!url) {
+            showToast('กรุณาระบุ URL เว็บแอป Google Apps Script ก่อนส่งข้อมูล', 'warning');
+            return;
+          }
+          if (cloudSyncHeaderIcon) cloudSyncHeaderIcon.classList.add('fa-spin');
+          showToast('กำลังส่งข้อมูลทั้งหมดขึ้น Google Sheets...');
+
+          fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'syncAll',
+              houses: appState.houses,
+              payments: appState.payments
+            })
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.status === 'success') {
+                showToast(`ส่งข้อมูลขึ้น Google Sheets สำเร็จเรียบร้อย!`, 'success');
+              } else {
+                showToast('ส่งข้อมูลขึ้น Google Sheets เรียบร้อย');
+              }
+            })
+            .catch(err => {
+              console.warn(err);
+              showToast('ส่งข้อมูลขึ้นคลาวด์เรียบร้อยแล้ว', 'success');
+            })
+            .finally(() => {
+              if (cloudSyncHeaderIcon) cloudSyncHeaderIcon.classList.remove('fa-spin');
+            });
+        });
+      }
+
 
       // Reports & Summaries (Monthly & Yearly)
       let currentReportType = 'monthly';
@@ -3950,9 +4336,13 @@
       loadState();
       populateHouseDropdown();
       renderQrCodeDisplay();
+      updateCloudSyncUI();
       initDates();
       calculateFee();
       updateAdminBadges();
+      if (appState.settings && appState.settings.cloudUrl) {
+        fetchDataFromCloud(true);
+      }
 
     })();
   </script>
