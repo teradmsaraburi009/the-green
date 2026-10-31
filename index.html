@@ -1196,7 +1196,7 @@
                 <div class="flex flex-col sm:flex-row gap-2">
                   <div class="relative flex-1">
                     <i class="fa-solid fa-link absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-                    <input type="url" id="cloudUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full pl-9 pr-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs sm:text-sm text-white placeholder-slate-400 font-mono focus:ring-2 focus:ring-emerald-400 focus:bg-slate-900 transition-all">
+                    <input type="url" id="cloudUrlInput" value="https://script.google.com/macros/s/AKfycbxDQy24LlHmIj0bdr2DfNfrm8_u5Kb8wNXqQB97qeEgTIIUvFvNZnENgsdaJbKn9RGz/exec" placeholder="https://script.google.com/macros/s/AKfycbxDQy24LlHmIj0bdr2DfNfrm8_u5Kb8wNXqQB97qeEgTIIUvFvNZnENgsdaJbKn9RGz/exec" class="w-full pl-9 pr-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs sm:text-sm text-white placeholder-slate-400 font-mono focus:ring-2 focus:ring-emerald-400 focus:bg-slate-900 transition-all">
                   </div>
                   <button type="button" id="saveCloudUrlBtn" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow transition-all flex items-center justify-center gap-1.5 shrink-0">
                     <i class="fa-solid fa-floppy-disk"></i>
@@ -1656,6 +1656,7 @@
       const HOUSES_COUNT = 25;
       const DEFAULT_ADMIN = { user: 'admin', pass: 'thegreen2026' };
       const STORAGE_KEY = 'thegreen2_app_data_v4';
+      const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbxDQy24LlHmIj0bdr2DfNfrm8_u5Kb8wNXqQB97qeEgTIIUvFvNZnENgsdaJbKn9RGz/exec';
 
       const THAI_MONTHS = [
         'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -1853,7 +1854,10 @@
             appState.houses = Array.isArray(parsed.houses) ? parsed.houses : generateInitialHouses();
             appState.payments = Array.isArray(parsed.payments) ? parsed.payments : generateInitialPayments();
             appState.admin = parsed.admin || { ...DEFAULT_ADMIN };
-            appState.settings = parsed.settings || { customQrImage: null };
+            appState.settings = parsed.settings || { customQrImage: null, cloudUrl: DEFAULT_CLOUD_URL };
+            if (!appState.settings.cloudUrl) {
+              appState.settings.cloudUrl = DEFAULT_CLOUD_URL;
+            }
             return;
           }
         } catch (e) {
@@ -1862,7 +1866,7 @@
         appState.houses = generateInitialHouses();
         appState.payments = generateInitialPayments();
         appState.admin = { ...DEFAULT_ADMIN };
-        appState.settings = { customQrImage: null };
+        appState.settings = { customQrImage: null, cloudUrl: DEFAULT_CLOUD_URL };
       }
 
       function saveState() {
@@ -3639,7 +3643,7 @@
       }
 
       function updateCloudSyncUI() {
-        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        const url = (appState.settings && appState.settings.cloudUrl && appState.settings.cloudUrl.trim()) ? appState.settings.cloudUrl.trim() : DEFAULT_CLOUD_URL;
         if (cloudUrlInput) cloudUrlInput.value = url;
         if (url) {
           if (cloudSyncStatusBadge) {
@@ -3680,7 +3684,7 @@
 
       if (testCloudSyncBtn) {
         testCloudSyncBtn.addEventListener('click', () => {
-          const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+          const url = (appState.settings && appState.settings.cloudUrl && appState.settings.cloudUrl.trim()) ? appState.settings.cloudUrl.trim() : DEFAULT_CLOUD_URL;
           if (!url) {
             showToast('กรุณาระบุ URL เว็บแอป Google Apps Script ก่อนทดสอบ', 'warning');
             return;
@@ -3691,7 +3695,7 @@
 
       if (cloudSyncHeaderBtn) {
         cloudSyncHeaderBtn.addEventListener('click', () => {
-          const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+          const url = (appState.settings && appState.settings.cloudUrl && appState.settings.cloudUrl.trim()) ? appState.settings.cloudUrl.trim() : DEFAULT_CLOUD_URL;
           if (!url) {
             switchView('admin');
             if (appState.isAdminLoggedIn) {
@@ -3705,7 +3709,7 @@
       }
 
       function fetchDataFromCloud(silent = false) {
-        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        const url = (appState.settings && appState.settings.cloudUrl && appState.settings.cloudUrl.trim()) ? appState.settings.cloudUrl.trim() : DEFAULT_CLOUD_URL;
         if (!url) return;
 
         if (cloudSyncHeaderIcon) cloudSyncHeaderIcon.classList.add('fa-spin');
@@ -3761,7 +3765,7 @@
       }
 
       function pushPaymentToCloud(payment) {
-        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        const url = (appState.settings && appState.settings.cloudUrl && appState.settings.cloudUrl.trim()) ? appState.settings.cloudUrl.trim() : DEFAULT_CLOUD_URL;
         if (!url) return;
 
         fetch(url, {
@@ -3775,7 +3779,7 @@
       }
 
       function pushSlipStatusToCloud(id, newStatus) {
-        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        const url = (appState.settings && appState.settings.cloudUrl && appState.settings.cloudUrl.trim()) ? appState.settings.cloudUrl.trim() : DEFAULT_CLOUD_URL;
         if (!url) return;
 
         fetch(url, {
@@ -3790,7 +3794,7 @@
       }
 
       function pushHousesToCloud() {
-        const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+        const url = (appState.settings && appState.settings.cloudUrl && appState.settings.cloudUrl.trim()) ? appState.settings.cloudUrl.trim() : DEFAULT_CLOUD_URL;
         if (!url) return;
 
         fetch(url, {
@@ -3805,7 +3809,7 @@
 
       if (uploadAllToCloudBtn) {
         uploadAllToCloudBtn.addEventListener('click', () => {
-          const url = (appState.settings && appState.settings.cloudUrl) ? appState.settings.cloudUrl.trim() : '';
+          const url = (appState.settings && appState.settings.cloudUrl && appState.settings.cloudUrl.trim()) ? appState.settings.cloudUrl.trim() : DEFAULT_CLOUD_URL;
           if (!url) {
             showToast('กรุณาระบุ URL เว็บแอป Google Apps Script ก่อนส่งข้อมูล', 'warning');
             return;
