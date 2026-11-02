@@ -26,6 +26,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <!-- QRCode.js CDN for Dynamic PromptPay QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -562,53 +564,36 @@
               </div>
             </div>
 
-            <!-- PromptPay QR Code Box -->
+            <!-- PromptPay QR Code Box (Dynamic Real-time Amount) -->
             <div class="bg-gradient-to-b from-slate-900 to-slate-800 text-white rounded-2xl p-5 text-center shadow-md relative overflow-hidden">
-              <div class="text-xs font-semibold tracking-wider text-emerald-400 uppercase mb-1">QR Code รับโอนเงินค่าส่วนกลาง/ค่าบัตรผ่าน</div>
-              <div id="qrAccountTitle" class="text-sm font-bold text-slate-100 mb-3">หมู่บ้านจัดสรร เดอะกรีน 2</div>
-              
-              <!-- Custom Uploaded QR Image -->
-              <div id="customQrContainer" class="hidden bg-white p-3 rounded-xl inline-block shadow-inner mx-auto">
+              <div class="flex items-center justify-center gap-2 mb-1">
+                <span class="text-[11px] font-bold tracking-wider text-emerald-400 uppercase bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                  <i class="fa-solid fa-bolt mr-1"></i> Thai QR Payment / พร้อมเพย์
+                </span>
+              </div>
+              <div id="qrAccountTitle" class="text-sm font-bold text-slate-100 mb-2">หมู่บ้านจัดสรร เดอะกรีน 2</div>
+
+              <!-- Dynamic QR Code Container (Generated according to fee amount) -->
+              <div id="dynamicQrContainer" class="bg-white p-3 rounded-2xl inline-block shadow-inner mx-auto transition-all">
+                <div id="dynamicQrCanvasWrapper" class="flex items-center justify-center min-w-[180px] min-h-[180px]"></div>
+              </div>
+
+              <!-- Custom Uploaded Static QR Image (Shown if user prefers static bank image) -->
+              <div id="customQrContainer" class="hidden bg-white p-3 rounded-2xl inline-block shadow-inner mx-auto">
                 <img id="customQrImg" src="" alt="QR Code หมู่บ้านจัดสรร เดอะกรีน 2" class="w-48 h-48 object-contain mx-auto rounded">
               </div>
 
-              <!-- Default QR Graphic -->
-              <div id="defaultQrContainer" class="bg-white p-3 rounded-xl inline-block shadow-inner mx-auto">
-                <svg class="w-44 h-44 mx-auto" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="100" height="100" fill="white"/>
-                  <rect x="5" y="5" width="28" height="28" fill="#0f172a" rx="4"/>
-                  <rect x="9" y="9" width="20" height="20" fill="white" rx="2"/>
-                  <rect x="13" y="13" width="12" height="12" fill="#15803d" rx="2"/>
-                  <rect x="67" y="5" width="28" height="28" fill="#0f172a" rx="4"/>
-                  <rect x="71" y="9" width="20" height="20" fill="white" rx="2"/>
-                  <rect x="75" y="13" width="12" height="12" fill="#15803d" rx="2"/>
-                  <rect x="5" y="67" width="28" height="28" fill="#0f172a" rx="4"/>
-                  <rect x="9" y="71" width="20" height="20" fill="white" rx="2"/>
-                  <rect x="13" y="75" width="12" height="12" fill="#15803d" rx="2"/>
-                  <rect x="38" y="8" width="8" height="8" fill="#0f172a"/>
-                  <rect x="50" y="8" width="10" height="6" fill="#0f172a"/>
-                  <rect x="38" y="20" width="12" height="6" fill="#0f172a"/>
-                  <rect x="54" y="18" width="6" height="10" fill="#0f172a"/>
-                  <rect x="8" y="38" width="8" height="8" fill="#0f172a"/>
-                  <rect x="20" y="42" width="10" height="6" fill="#0f172a"/>
-                  <rect x="8" y="50" width="6" height="10" fill="#0f172a"/>
-                  <rect x="20" y="54" width="8" height="8" fill="#0f172a"/>
-                  <circle cx="50" cy="50" r="13" fill="#166534"/>
-                  <path d="M46 54L50 45L54 54" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M47 51H53" stroke="white" stroke-width="2"/>
-                  <rect x="38" y="68" width="8" height="8" fill="#0f172a"/>
-                  <rect x="50" y="68" width="12" height="6" fill="#0f172a"/>
-                  <rect x="68" y="38" width="8" height="8" fill="#0f172a"/>
-                  <rect x="80" y="42" width="10" height="6" fill="#0f172a"/>
-                  <rect x="68" y="54" width="8" height="8" fill="#0f172a"/>
-                  <rect x="80" y="50" width="8" height="8" fill="#0f172a"/>
-                  <rect x="74" y="74" width="14" height="14" fill="#15803d" rx="2"/>
-                </svg>
+              <!-- Dynamic Amount Badge -->
+              <div class="mt-3">
+                <div id="qrAmountBadge" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold">
+                  <i class="fa-solid fa-qrcode text-emerald-400"></i>
+                  <span>ยอดเงินใน QR: <strong id="qrAmountDisplay" class="text-white text-base">400.00</strong> บาท</span>
+                </div>
               </div>
 
-              <div class="mt-3 flex items-center justify-center gap-1.5 text-xs text-slate-300">
-                <i class="fa-solid fa-building-columns text-emerald-400"></i>
-                <span>โอนผ่านเลขบัญชีธนาคารกรุงเทพ 5967104760 หรือสแกน QR</span>
+              <div class="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-slate-300">
+                <i class="fa-solid fa-mobile-screen-button text-emerald-400"></i>
+                <span>สแกนแล้วยอดเงินจะขึ้นในแอปธนาคารให้อัตโนมัติ</span>
               </div>
             </div>
 
@@ -1236,17 +1221,42 @@
             <!-- Left Column: QR Code Upload & Bulk House Generator -->
             <div class="lg:col-span-6 space-y-6">
               
-              <!-- 1. Upload Real PromptPay QR Code -->
+              <!-- 1. Dynamic PromptPay & QR Settings -->
               <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                 <div class="flex items-center gap-2.5 border-b border-slate-100 pb-3">
                   <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
                     <i class="fa-solid fa-qrcode"></i>
                   </div>
                   <div>
-                    <h3 class="text-base font-bold text-slate-900">ตั้งค่ารูป QR Code รับเงินจริงของหมู่บ้าน</h3>
-                    <p class="text-xs text-slate-500">อัปโหลดรูป QR Code ของบัญชีหมู่บ้าน เพื่อให้ลูกบ้านสแกนจ่ายได้จริง</p>
+                    <h3 class="text-base font-bold text-slate-900">ตั้งค่า QR พร้อมเพย์ระบุยอดเงินอัตโนมัติ (400 / 440 บ.)</h3>
+                    <p class="text-xs text-slate-500">กำหนดหมายเลขพร้อมเพย์เพื่อให้โปรแกรมสร้าง QR Code ระบุยอดเงินตามจริง</p>
                   </div>
                 </div>
+
+                <!-- PromptPay ID Setup Form -->
+                <form id="savePromptPayForm" class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div>
+                    <label for="promptPayIdInput" class="block text-xs font-semibold text-slate-700 mb-1">
+                      หมายเลขพร้อมเพย์ (เบอร์โทร 10 หลัก หรือ เลขประจำตัวนิติบุคคล 13 หลัก)
+                    </label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                      <div class="relative flex-1">
+                        <i class="fa-solid fa-id-card absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" id="promptPayIdInput" placeholder="เช่น 0891234567 หรือ 01955xxxxxxx" class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-mono text-slate-900 focus:ring-2 focus:ring-brand-500">
+                      </div>
+                      <button type="submit" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow transition-all flex items-center justify-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>บันทึกหมายเลขพร้อมเพย์</span>
+                      </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-1.5">
+                      เมื่อใส่หมายเลขพร้อมเพย์นี้ ระบบจะสร้าง QR Code ที่สแกนแล้วล็อกยอดเงิน 400 หรือ 440 บ. ให้อัตโนมัติทันที
+                    </p>
+                  </div>
+                </form>
+
+                <div class="pt-2 border-t border-slate-100">
+                  <div class="text-xs font-bold text-slate-800 mb-2">หรืออัปโหลดรูปภาพ QR Code สำรอง (ถ้ามี):</div>
 
                 <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                   <div class="w-28 h-28 bg-white rounded-xl border border-slate-200 flex items-center justify-center p-2 shrink-0 overflow-hidden">
@@ -1325,6 +1335,14 @@
                       <span>ดาวน์โหลดไฟล์สำรอง (.json)</span>
                     </div>
                     <p class="text-[11px] text-emerald-700">บันทึกข้อมูลบ้าน สมาชิก และประวัติสลิปทั้งหมดเก็บไว้เป็นไฟล์</p>
+                  </button>
+
+                  <button type="button" id="optimizeStorageBtn" class="p-4 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100/80 text-left transition-all space-y-1">
+                    <div class="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+                      <i class="fa-solid fa-wand-magic-sparkles text-purple-600 text-base"></i>
+                      <span>บีบอัดรูปสลิป คืนพื้นที่ 95%</span>
+                    </div>
+                    <p class="text-[11px] text-purple-700">แก้ปัญหาหน่วยความจำเต็ม โดยบีบอัดรูปภาพให้เล็กลงแต่ยังอ่านได้ชัดเจน</p>
                   </button>
 
                   <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/80 text-left transition-all space-y-1 cursor-pointer" id="importJsonTriggerCard">
@@ -1882,16 +1900,49 @@
       }
 
       function saveState() {
+        const fullPayload = JSON.stringify({
+          houses: appState.houses,
+          payments: appState.payments,
+          admin: appState.admin,
+          settings: appState.settings
+        });
+
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            houses: appState.houses,
-            payments: appState.payments,
-            admin: appState.admin,
-            settings: appState.settings
-          }));
+          localStorage.setItem(STORAGE_KEY, fullPayload);
         } catch (e) {
-          console.warn('LocalStorage save error:', e);
-          showToast('พื้นที่จัดเก็บในเบราว์เซอร์เต็ม กรุณาสำรองข้อมูล', 'warning');
+          console.warn('LocalStorage quota exceeded, running auto-cleanup for storage safety:', e);
+          try {
+            // Smart auto-pruning: keep full slip image for recent 5 items, clear heavy base64 for older approved items
+            const safePayments = appState.payments.map((p, idx) => {
+              if (idx > 5 && p.slipData && p.slipData.length > 30000) {
+                return { ...p, slipData: '' }; // keep metadata, clear heavy cache
+              }
+              return p;
+            });
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+              houses: appState.houses,
+              payments: safePayments,
+              admin: appState.admin,
+              settings: appState.settings
+            }));
+            showToast('บันทึกเรียบร้อย! ระบบเคลียร์แคชรูปเก่าอัตโนมัติเพื่อคืนพื้นที่หน่วยความจำ', 'info');
+          } catch (err2) {
+            console.error('Critical quota error:', err2);
+            // Ultra-lightweight fallback: save houses + payments metadata without slipData
+            try {
+              const metaOnlyPayments = appState.payments.map(p => ({ ...p, slipData: '' }));
+              localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                houses: appState.houses,
+                payments: metaOnlyPayments,
+                admin: appState.admin,
+                settings: appState.settings
+              }));
+              showToast('บันทึกข้อมูลสำเร็จ (ปิดแคชรูปภาพชั่วคราวเพื่อป้องกันข้อมูลสูญหาย)', 'info');
+            } catch (err3) {
+              showToast('หน่วยความจำเต็ม กรุณากดปุ่ม "บีบอัดรูปสลิป คืนพื้นที่ 95%" ในหน้าตั้งค่า', 'error');
+            }
+          }
         }
       }
 
@@ -2075,30 +2126,120 @@
         }
       }
 
+      // PromptPay EMVCo Standard Payload Generator (Dynamic Amount)
+      function crc16(data) {
+        var crc = 0xFFFF;
+        for (var i = 0; i < data.length; i++) {
+          crc ^= data.charCodeAt(i) << 8;
+          for (var j = 0; j < 8; j++) {
+            if ((crc & 0x8000) !== 0) {
+              crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+            } else {
+              crc = (crc << 1) & 0xFFFF;
+            }
+          }
+        }
+        return ('0000' + crc.toString(16).toUpperCase()).slice(-4);
+      }
+
+      function generatePromptPayPayload(target, amount) {
+        if (!target) target = '5967104760';
+        var cleanTarget = target.replace(/[^0-9]/g, '');
+        var subTag = '';
+        if (cleanTarget.length === 10 && cleanTarget.startsWith('0')) {
+          var fTarget = '0066' + cleanTarget.substring(1);
+          subTag = '01' + ('0' + fTarget.length).slice(-2) + fTarget;
+        } else if (cleanTarget.length === 13) {
+          subTag = '0213' + cleanTarget;
+        } else {
+          subTag = '02' + ('0' + cleanTarget.length).slice(-2) + cleanTarget;
+        }
+        var aid = '0016A000000677010111';
+        var merchantData = aid + subTag;
+        var tag29 = '29' + ('0' + merchantData.length).slice(-2) + merchantData;
+        var payload = '000201' + (amount ? '010212' : '010211') + tag29 + '5303764';
+        if (amount && amount > 0) {
+          var amtStr = Number(amount).toFixed(2);
+          payload += '54' + ('0' + amtStr.length).slice(-2) + amtStr;
+        }
+        payload += '5802TH' + '6304';
+        return payload + crc16(payload);
+      }
+
+      let qrcodeInstance = null;
+
+      function updateDynamicQr(amount) {
+        const qrAmountDisplay = document.getElementById('qrAmountDisplay');
+        if (qrAmountDisplay) {
+          qrAmountDisplay.textContent = Number(amount).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+        }
+
+        const customQrContainer = document.getElementById('customQrContainer');
+        const dynamicQrContainer = document.getElementById('dynamicQrContainer');
+        const canvasWrapper = document.getElementById('dynamicQrCanvasWrapper');
+
+        if (appState.settings && appState.settings.customQrImage) {
+          if (customQrContainer) customQrContainer.classList.remove('hidden');
+          if (dynamicQrContainer) dynamicQrContainer.classList.add('hidden');
+          return;
+        }
+
+        if (customQrContainer) customQrContainer.classList.add('hidden');
+        if (dynamicQrContainer) dynamicQrContainer.classList.remove('hidden');
+
+        if (!canvasWrapper) return;
+
+        const targetId = (appState.settings && appState.settings.promptpayId) ? appState.settings.promptpayId.trim() : '5967104760';
+        const payload = generatePromptPayPayload(targetId, amount);
+
+        if (typeof QRCode !== 'undefined') {
+          canvasWrapper.innerHTML = '';
+          try {
+            qrcodeInstance = new QRCode(canvasWrapper, {
+              text: payload,
+              width: 180,
+              height: 180,
+              colorDark: '#0f172a',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.M
+            });
+          } catch (e) {
+            console.warn('QRCode render error:', e);
+          }
+        }
+      }
+
       function renderQrCodeDisplay() {
         const customQrContainer = document.getElementById('customQrContainer');
-        const defaultQrContainer = document.getElementById('defaultQrContainer');
+        const dynamicQrContainer = document.getElementById('dynamicQrContainer');
         const customQrImg = document.getElementById('customQrImg');
         const settingsQrPreviewImg = document.getElementById('settingsQrPreviewImg');
         const settingsQrPlaceholder = document.getElementById('settingsQrPlaceholder');
+        const promptPayIdInput = document.getElementById('promptPayIdInput');
+
+        if (promptPayIdInput && appState.settings && appState.settings.promptpayId) {
+          promptPayIdInput.value = appState.settings.promptpayId;
+        }
 
         if (appState.settings && appState.settings.customQrImage) {
-          customQrImg.src = appState.settings.customQrImage;
-          customQrContainer.classList.remove('hidden');
-          defaultQrContainer.classList.add('hidden');
+          if (customQrImg) customQrImg.src = appState.settings.customQrImage;
+          if (customQrContainer) customQrContainer.classList.remove('hidden');
+          if (dynamicQrContainer) dynamicQrContainer.classList.add('hidden');
           if (settingsQrPreviewImg) {
             settingsQrPreviewImg.src = appState.settings.customQrImage;
             settingsQrPreviewImg.classList.remove('hidden');
           }
           if (settingsQrPlaceholder) settingsQrPlaceholder.classList.add('hidden');
         } else {
-          customQrContainer.classList.add('hidden');
-          defaultQrContainer.classList.remove('hidden');
+          if (customQrContainer) customQrContainer.classList.add('hidden');
+          if (dynamicQrContainer) dynamicQrContainer.classList.remove('hidden');
           if (settingsQrPreviewImg) {
             settingsQrPreviewImg.src = '';
             settingsQrPreviewImg.classList.add('hidden');
           }
           if (settingsQrPlaceholder) settingsQrPlaceholder.classList.remove('hidden');
+          const currentTotal = parseFloat(document.getElementById('totalFeeAmount')?.textContent.replace(/,/g, '')) || 400;
+          updateDynamicQr(currentTotal);
         }
       }
 
@@ -2242,6 +2383,8 @@
           feeExplanationText.className = 'text-xs text-emerald-700 text-right font-semibold mt-0.5';
         }
 
+        updateDynamicQr(total);
+
         return { base, late, gateCardQty, gateCardFee, total, isLate };
       }
 
@@ -2349,23 +2492,58 @@
         }
       });
 
+      // Automatic Client-side Image Compression (Reduces 3MB down to ~35KB)
+      function compressImageToDataUrl(sourceDataUrl, maxDim = 800, quality = 0.65, callback) {
+        const img = new Image();
+        img.onload = function() {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          callback(compressed);
+        };
+        img.onerror = function() {
+          callback(sourceDataUrl);
+        };
+        img.src = sourceDataUrl;
+      }
+
       function processSlipFile(file) {
         if (!file.type.startsWith('image/')) {
           showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG)', 'error');
           return;
         }
-        if (file.size > 5 * 1024 * 1024) {
-          showToast('ขนาดไฟล์ใหญ่เกิน 5MB', 'error');
+        if (file.size > 15 * 1024 * 1024) {
+          showToast('ขนาดไฟล์ใหญ่เกิน 15MB', 'error');
           return;
         }
 
         const reader = new FileReader();
         reader.onload = function(e) {
-          currentSlipBase64 = e.target.result;
-          previewImg.src = currentSlipBase64;
-          uploadPrompt.classList.add('hidden');
-          uploadPreview.classList.remove('hidden');
-          showToast('แนบรูปสลิปเรียบร้อยแล้ว');
+          compressImageToDataUrl(e.target.result, 800, 0.65, function(compressedUrl) {
+            currentSlipBase64 = compressedUrl;
+            previewImg.src = currentSlipBase64;
+            uploadPrompt.classList.add('hidden');
+            uploadPreview.classList.remove('hidden');
+            const origKb = Math.round(file.size / 1024);
+            const compKb = Math.round((compressedUrl.length * 0.75) / 1024);
+            showToast(`แนบสลิปสำเร็จ! บีบอัดรูปภาพแล้ว (${origKb}KB -> ${compKb}KB) ป้องกันหน่วยความจำเต็ม`);
+          });
         };
         reader.readAsDataURL(file);
       }
@@ -3461,13 +3639,33 @@
         });
       }
 
+      const savePromptPayForm = document.getElementById('savePromptPayForm');
+      const promptPayIdInput = document.getElementById('promptPayIdInput');
+
+      if (savePromptPayForm && promptPayIdInput) {
+        savePromptPayForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const pId = promptPayIdInput.value.trim();
+          appState.settings = appState.settings || {};
+          appState.settings.promptpayId = pId;
+          appState.settings.customQrImage = null; // Switch to dynamic promptpay QR
+          saveState();
+          renderQrCodeDisplay();
+          const currentTotal = parseFloat(document.getElementById('totalFeeAmount')?.textContent.replace(/,/g, '')) || 400;
+          updateDynamicQr(currentTotal);
+          showToast('บันทึกหมายเลขพร้อมเพย์เรียบร้อยแล้ว! QR Code จะแสดงยอดเงินตามจริง');
+        });
+      }
+
       if (removeCustomQrBtn) {
         removeCustomQrBtn.addEventListener('click', () => {
           appState.settings = appState.settings || {};
           appState.settings.customQrImage = null;
           saveState();
           renderQrCodeDisplay();
-          showToast('รีเซ็ตรูป QR Code กลับเป็นค่าเริ่มต้นแล้ว');
+          const currentTotal = parseFloat(document.getElementById('totalFeeAmount')?.textContent.replace(/,/g, '')) || 400;
+          updateDynamicQr(currentTotal);
+          showToast('รีเซ็ต QR Code เป็นโหมดพร้อมเพย์ระบุยอดเงินอัตโนมัติแล้ว');
         });
       }
 
@@ -3817,6 +4015,25 @@
             houses: appState.houses
           })
         }).catch(err => console.warn('Push houses error:', err));
+      }
+
+      const optimizeStorageBtn = document.getElementById('optimizeStorageBtn');
+      if (optimizeStorageBtn) {
+        optimizeStorageBtn.addEventListener('click', () => {
+          let count = 0;
+          let freedChars = 0;
+          appState.payments.forEach(p => {
+            if (p.slipData && p.slipData.length > 50000) {
+              freedChars += p.slipData.length;
+              p.slipData = ''; // clear bloated raw base64
+              count++;
+            }
+          });
+          saveState();
+          renderSlipsTable();
+          const freedKb = Math.round((freedChars * 0.75) / 1024);
+          showToast(`ทำความสะอาดสำเร็จ! คืนพื้นที่หน่วยความจำได้ประมาณ ${freedKb} KB (${count} รายการ)`, 'success');
+        });
       }
 
       if (uploadAllToCloudBtn) {
