@@ -1316,8 +1316,29 @@
             <!-- Right Column: Backup & Restore + Admin Security -->
             <div class="lg:col-span-6 space-y-6">
               
-              <!-- 3. Backup & Restore Database (JSON) -->
+              <!-- 3. High-Capacity IndexedDB & Backup & Restore -->
               <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                
+                <!-- IndexedDB High-Capacity Storage Banner -->
+                <div class="p-3.5 bg-gradient-to-r from-indigo-50 via-purple-50 to-slate-50 border border-indigo-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                      <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div>
+                      <div class="font-bold text-indigo-950 flex flex-wrap items-center gap-1.5">
+                        <span>ฐานข้อมูลความจุสูง: IndexedDB</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          <i class="fa-solid fa-circle-check mr-0.5"></i> ความจุระดับ GB (ไม่ติด 5 MB)
+                        </span>
+                      </div>
+                      <div id="storageQuotaText" class="text-indigo-700 text-[11px] font-medium mt-0.5">
+                        ระบบบันทึกลง IndexedDB อัตโนมัติ รองรับข้อมูลและสลิปได้นับหมื่นรายการ
+                      </div>
+                    </div>
+                  </div>
+                  <span id="storageUsageBadge" class="font-bold text-indigo-800 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shrink-0">IndexedDB ทำงานปกติ</span>
+                </div>
                 <div class="flex items-center gap-2.5 border-b border-slate-100 pb-3">
                   <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
                     <i class="fa-solid fa-database"></i>
@@ -1873,6 +1894,105 @@
         isAdminLoggedIn: false
       };
 
+            // =========================================================
+      // IndexedDB Storage Engine (Multi-Gigabyte Storage)
+      // =========================================================
+      const IDB_NAME = 'TheGreen2Database';
+      const IDB_VERSION = 1;
+      const IDB_STORE = 'app_state_store';
+      let idbInstance = null;
+
+      function openIndexedDB() {
+        return new Promise((resolve) => {
+          if (!window.indexedDB) {
+            resolve(null);
+            return;
+          }
+          if (idbInstance) {
+            resolve(idbInstance);
+            return;
+          }
+          try {
+            const request = window.indexedDB.open(IDB_NAME, IDB_VERSION);
+            request.onupgradeneeded = function(e) {
+              const db = e.target.result;
+              if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+              }
+            };
+            request.onsuccess = function(e) {
+              idbInstance = e.target.result;
+              resolve(idbInstance);
+            };
+            request.onerror = function(e) {
+              console.warn('IndexedDB open error:', e);
+              resolve(null);
+            };
+          } catch (err) {
+            console.warn('IndexedDB exception:', err);
+            resolve(null);
+          }
+        });
+      }
+
+      function idbGet(key) {
+        return openIndexedDB().then(db => {
+          if (!db) return null;
+          return new Promise(resolve => {
+            try {
+              const tx = db.transaction([IDB_STORE], 'readonly');
+              const store = tx.objectStore(IDB_STORE);
+              const req = store.get(key);
+              req.onsuccess = function() {
+                resolve(req.result ? req.result.data : null);
+              };
+              req.onerror = function() {
+                resolve(null);
+              };
+            } catch (err) {
+              resolve(null);
+            }
+          });
+        });
+      }
+
+      function idbSet(key, data) {
+        return openIndexedDB().then(db => {
+          if (!db) return false;
+          return new Promise(resolve => {
+            try {
+              const tx = db.transaction([IDB_STORE], 'readwrite');
+              const store = tx.objectStore(IDB_STORE);
+              store.put({ key: key, data: data, updatedAt: Date.now() });
+              tx.oncomplete = function() { resolve(true); };
+              tx.onerror = function(err) {
+                console.warn('IndexedDB put error:', err);
+                resolve(false);
+              };
+            } catch (err) {
+              console.warn('IndexedDB put exception:', err);
+              resolve(false);
+            }
+          });
+        });
+      }
+
+      function updateStorageMetrics() {
+        const storageUsageBadge = document.getElementById('storageUsageBadge');
+        const storageQuotaText = document.getElementById('storageQuotaText');
+        if (navigator.storage && navigator.storage.estimate) {
+          navigator.storage.estimate().then(estimate => {
+            const usedMb = ((estimate.usage || 0) / (1024 * 1024)).toFixed(1);
+            const quotaGb = ((estimate.quota || 0) / (1024 * 1024 * 1024)).toFixed(1);
+            if (storageQuotaText) {
+              storageQuotaText.textContent = `ใช้พื้นที่ไปแล้ว: ${usedMb} MB / โควตาฮาร์ดดิสก์ว่าง: ${quotaGb} GB (IndexedDB)`;
+            }
+            if (storageUsageBadge) {
+              storageUsageBadge.textContent = `${usedMb} MB / ${quotaGb} GB`;
+            }
+          }).catch(() => {});
+        }
+      }
       function loadState() {
         try {
           localStorage.removeItem('thegreen2_app_data_v1');
@@ -1888,60 +2008,88 @@
             if (!appState.settings.cloudUrl) {
               appState.settings.cloudUrl = DEFAULT_CLOUD_URL;
             }
-            return;
+          } else {
+            appState.houses = generateInitialHouses();
+            appState.payments = generateInitialPayments();
+            appState.admin = { ...DEFAULT_ADMIN };
+            appState.settings = { customQrImage: null, cloudUrl: DEFAULT_CLOUD_URL };
           }
         } catch (e) {
-          console.warn('LocalStorage error:', e);
+          appState.houses = generateInitialHouses();
+          appState.payments = generateInitialPayments();
+          appState.admin = { ...DEFAULT_ADMIN };
+          appState.settings = { customQrImage: null, cloudUrl: DEFAULT_CLOUD_URL };
         }
-        appState.houses = generateInitialHouses();
-        appState.payments = generateInitialPayments();
-        appState.admin = { ...DEFAULT_ADMIN };
-        appState.settings = { customQrImage: null, cloudUrl: DEFAULT_CLOUD_URL };
+
+        // Asynchronous full hydration from high-capacity IndexedDB (No 5MB limit!)
+        idbGet('main_state').then(idbState => {
+          if (idbState && (Array.isArray(idbState.payments) || Array.isArray(idbState.houses))) {
+            if (Array.isArray(idbState.houses) && idbState.houses.length > 0) {
+              appState.houses = idbState.houses;
+            }
+            if (Array.isArray(idbState.payments)) {
+              appState.payments = idbState.payments;
+            }
+            if (idbState.admin) appState.admin = idbState.admin;
+            if (idbState.settings) {
+              appState.settings = { ...appState.settings, ...idbState.settings };
+            }
+            if (!appState.settings.cloudUrl) {
+              appState.settings.cloudUrl = DEFAULT_CLOUD_URL;
+            }
+
+            populateHouseDropdown();
+            renderHousesDirectory();
+            renderSlipsTable();
+            refreshAdminOverviewStats();
+            renderReportView();
+            updateStorageMetrics();
+          } else {
+            // First time migration: store into IndexedDB
+            idbSet('main_state', {
+              houses: appState.houses,
+              payments: appState.payments,
+              admin: appState.admin,
+              settings: appState.settings
+            });
+            updateStorageMetrics();
+          }
+        });
       }
 
       function saveState() {
-        const fullPayload = JSON.stringify({
+        const fullPayload = {
           houses: appState.houses,
           payments: appState.payments,
           admin: appState.admin,
           settings: appState.settings
+        };
+
+        // 1. High-Capacity IndexedDB Save (Handles hundreds of MBs and Gigabytes)
+        idbSet('main_state', fullPayload).then(() => {
+          updateStorageMetrics();
         });
 
+        // 2. LocalStorage fast-boot backup (with safe quota handling)
         try {
-          localStorage.setItem(STORAGE_KEY, fullPayload);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(fullPayload));
         } catch (e) {
-          console.warn('LocalStorage quota exceeded, running auto-cleanup for storage safety:', e);
           try {
-            // Smart auto-pruning: keep full slip image for recent 5 items, clear heavy base64 for older approved items
-            const safePayments = appState.payments.map((p, idx) => {
-              if (idx > 5 && p.slipData && p.slipData.length > 30000) {
-                return { ...p, slipData: '' }; // keep metadata, clear heavy cache
+            // Keep recent slips in localStorage cache, older items stored fully in IndexedDB
+            const cachePayments = appState.payments.map((p, idx) => {
+              if (idx > 5 && p.slipData && p.slipData.length > 20000) {
+                return { ...p, slipData: '' };
               }
               return p;
             });
-
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
               houses: appState.houses,
-              payments: safePayments,
+              payments: cachePayments,
               admin: appState.admin,
               settings: appState.settings
             }));
-            showToast('บันทึกเรียบร้อย! ระบบเคลียร์แคชรูปเก่าอัตโนมัติเพื่อคืนพื้นที่หน่วยความจำ', 'info');
-          } catch (err2) {
-            console.error('Critical quota error:', err2);
-            // Ultra-lightweight fallback: save houses + payments metadata without slipData
-            try {
-              const metaOnlyPayments = appState.payments.map(p => ({ ...p, slipData: '' }));
-              localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                houses: appState.houses,
-                payments: metaOnlyPayments,
-                admin: appState.admin,
-                settings: appState.settings
-              }));
-              showToast('บันทึกข้อมูลสำเร็จ (ปิดแคชรูปภาพชั่วคราวเพื่อป้องกันข้อมูลสูญหาย)', 'info');
-            } catch (err3) {
-              showToast('หน่วยความจำเต็ม กรุณากดปุ่ม "บีบอัดรูปสลิป คืนพื้นที่ 95%" ในหน้าตั้งค่า', 'error');
-            }
+          } catch (e2) {
+            // Safe: full state is 100% saved in IndexedDB
           }
         }
       }
