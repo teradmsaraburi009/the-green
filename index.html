@@ -2611,40 +2611,53 @@ const DB_VERSION = 1;
 const STORE_NAME = "app_state_store";
 const STATE_KEY = "thegreen2_global_state_v2";
 
+const LS_FALLBACK_KEY = "thegreen2_ls_state_v2";
+
 function openDatabase() {
-  return new Promise((resolve, reject) => {
-    if (!window.indexedDB) {
-      console.warn("IndexedDB not supported, falling back to localStorage");
-      resolve(null);
-      return;
-    }
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
+  return new Promise((resolve) => {
+    try {
+      if (!window.indexedDB) {
+        resolve(null);
+        return;
       }
-    };
-    request.onsuccess = (e) => resolve(e.target.result);
-    request.onerror = (e) => {
-      console.error("IndexedDB open error:", e);
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      };
+      request.onsuccess = (e) => resolve(e.target.result);
+      request.onerror = (e) => {
+        console.warn("IndexedDB open error:", e);
+        resolve(null);
+      };
+    } catch (err) {
+      console.warn("IndexedDB blocked/unavailable:", err);
       resolve(null);
-    };
+    }
   });
 }
 
 async function saveStateToStorage() {
+  // 1. Always save reliable JSON backup in localStorage (strip oversized base64 only if quota exceeded)
   try {
-    // 1. Fast backup in localStorage for quick load
+    localStorage.setItem(LS_FALLBACK_KEY, JSON.stringify(appState));
+  } catch (e) {
     try {
-      const shallowCopy = { ...appState };
-      localStorage.setItem("thegreen2_cache_timestamp", Date.now().toString());
-      localStorage.setItem("thegreen2_houses_cache", JSON.stringify(shallowCopy.houses));
-    } catch (e) {
-      console.warn("LocalStorage cache full, relying on IndexedDB");
+      const lightCopy = {
+        ...appState,
+        payments: (appState.payments || []).map((p) => ({ ...p, slipUrl: "" })),
+        repairs: (appState.repairs || []).map((r) => ({ ...r, photoUrl: "" }))
+      };
+      localStorage.setItem(LS_FALLBACK_KEY, JSON.stringify(lightCopy));
+    } catch (e2) {
+      console.warn("localStorage fallback full:", e2);
     }
+  }
 
-    // 2. Persistent full storage in IndexedDB (handles up to 500MB+)
+  // 2. Persistent full storage in IndexedDB (handles up to 500MB+ including slip/repair photos)
+  try {
     const db = await openDatabase();
     if (db) {
       const tx = db.transaction(STORE_NAME, "readwrite");
@@ -2662,35 +2675,59 @@ async function saveStateToStorage() {
       });
     }
   } catch (err) {
-    console.error("Error saving state:", err);
+    console.warn("Error saving to IndexedDB:", err);
   }
+  return true;
 }
 
 async function loadStateFromStorage() {
+  // 1. Try IndexedDB first
   try {
     const db = await openDatabase();
     if (db) {
-      return new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.get(STATE_KEY);
-        request.onsuccess = () => {
+      const idbResult = await new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_NAME, "readonly");
+          const store = tx.objectStore(STORE_NAME);
+          const request = store.get(STATE_KEY);
+          request.onsuccess = () => {
+            db.close();
+            resolve(request.result || null);
+          };
+          request.onerror = () => {
+            db.close();
+            resolve(null);
+          };
+        } catch (e) {
           db.close();
-          if (request.result) {
-            appState = Object.assign(DEFAULT_STATE, request.result);
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        };
-        request.onerror = () => {
-          db.close();
-          resolve(false);
-        };
+          resolve(null);
+        }
       });
+      if (idbResult) {
+        appState = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), idbResult);
+        if (!Array.isArray(appState.houses)) appState.houses = [];
+        if (!Array.isArray(appState.payments)) appState.payments = [];
+        if (!Array.isArray(appState.repairs)) appState.repairs = [];
+        return true;
+      }
     }
   } catch (err) {
     console.warn("Could not load from IndexedDB:", err);
+  }
+
+  // 2. Fallback to localStorage if IndexedDB was empty or blocked
+  try {
+    const lsRaw = localStorage.getItem(LS_FALLBACK_KEY);
+    if (lsRaw) {
+      const parsed = JSON.parse(lsRaw);
+      appState = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), parsed);
+      if (!Array.isArray(appState.houses)) appState.houses = [];
+      if (!Array.isArray(appState.payments)) appState.payments = [];
+      if (!Array.isArray(appState.repairs)) appState.repairs = [];
+      return true;
+    }
+  } catch (err) {
+    console.warn("Could not load from localStorage fallback:", err);
   }
   return false;
 }
@@ -3990,7 +4027,23 @@ function setupEditMemberFormSubmit() {
     renderAdminHouses();
     renderAdminUnpaid();
     updateAdminBadges();
+    syncHousesToGoogleAppsScript();
   };
+}
+
+async function syncHousesToGoogleAppsScript() {
+  const scriptUrl = appState.adminConfig?.cloudScriptUrl;
+  if (!scriptUrl) return;
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "saveHouses", houses: appState.houses })
+    });
+  } catch (err) {
+    console.warn("Houses cloud sync error:", err);
+  }
 }
 
 async function deleteHouseRecord(houseNo) {
@@ -5309,6 +5362,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Add / Edit / Clear Member & Houses buttons
+  setupEditMemberFormSubmit();
   document.getElementById("openAddHouseModalBtn")?.addEventListener("click", openAddHouseModal);
   document.getElementById("closeEditMemberModalBtn")?.addEventListener("click", closeEditMemberModal);
   document.getElementById("cancelEditMemberBtn")?.addEventListener("click", closeEditMemberModal);
