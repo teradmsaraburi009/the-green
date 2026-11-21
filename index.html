@@ -3763,33 +3763,157 @@ function updateAdminBadges() {
 }
 
 // ==========================================
-// 12. ADMIN OVERVIEW TAB
+// 12. ADMIN OVERVIEW TAB (KPIs & CHARTS)
 // ==========================================
-let overviewChartInstance = null;
+let monthlyRevenueChartInstance = null;
+let statusPieChartInstance = null;
 
 function renderAdminOverview() {
   updateAdminBadges();
 
-  const totalHouses = appState.houses.length || 85;
-  const paidHouses = appState.houses.filter((h) => h.status === "paid").length;
-  const unpaidHouses = totalHouses - paidHouses;
+  const cur = getCurrentMonthYear();
+  const payments = appState.payments || [];
+  const houses = appState.houses || [];
 
-  const totalIncome = appState.payments
-    .filter((p) => p.status === "approved")
-    .reduce((sum, p) => sum + (p.grandTotal || 0), 0);
+  const totalHouses = houses.length;
+  const approvedPayments = payments.filter((p) => p.status === "approved");
+  const pendingPayments = payments.filter((p) => p.status === "pending");
 
-  // Render Chart if Canvas exists
-  const canvas = document.getElementById("overviewCollectionChart");
-  if (canvas && window.Chart) {
-    if (overviewChartInstance) overviewChartInstance.destroy();
-    overviewChartInstance = new Chart(canvas, {
-      type: "doughnut",
+  // Current month approved payments
+  const curMonthApproved = approvedPayments.filter((p) => {
+    if (p.monthKey === cur.monthKey) return true;
+    if (p.periodMonth === cur.month && p.periodYear === cur.yearAd) return true;
+    return false;
+  });
+
+  const curMonthTotal = curMonthApproved.reduce((sum, p) => sum + (Number(p.grandTotal) || 0), 0);
+  const totalGateCardAmount = approvedPayments.reduce((sum, p) => sum + (Number(p.gateCardAmount) || 0), 0);
+  const totalGateCardQty = approvedPayments.reduce((sum, p) => sum + (Number(p.gateCardQty) || 0), 0);
+
+  const paidHouseSet = new Set(
+    houses.filter((h) => h.status === "paid").map((h) => h.houseNo)
+  );
+  curMonthApproved.forEach((p) => paidHouseSet.add(p.houseNo));
+
+  const pendingHouseSet = new Set(
+    pendingPayments
+      .filter((p) => p.monthKey === cur.monthKey || (p.periodMonth === cur.month && p.periodYear === cur.yearAd))
+      .map((p) => p.houseNo)
+  );
+
+  const paidCount = totalHouses > 0 ? Math.min(paidHouseSet.size, totalHouses) : curMonthApproved.length;
+  const pendingHouseCount = pendingHouseSet.size;
+  const unpaidCount = Math.max(0, totalHouses - paidCount - pendingHouseCount);
+  const paymentRate = totalHouses > 0 ? Math.round((paidCount / totalHouses) * 100) : 0;
+
+  // Update KPI Cards
+  const elCollected = document.getElementById("statTotalCollected");
+  const elGateCards = document.getElementById("statTotalGateCards");
+  const elGateSub = document.getElementById("statGateCardCountSub");
+  const elPending = document.getElementById("statPendingCount");
+  const elRate = document.getElementById("statPaymentRate");
+  const elPaidSub = document.getElementById("statPaidCountSub");
+  const elYearBadge = document.getElementById("overviewChartYearBadge");
+
+  if (elCollected) elCollected.innerHTML = `${curMonthTotal.toLocaleString()} <span class="text-xs font-normal text-slate-500">บ.</span>`;
+  if (elGateCards) elGateCards.innerHTML = `${totalGateCardAmount.toLocaleString()} <span class="text-xs font-normal text-slate-500">บ.</span>`;
+  if (elGateSub) elGateSub.textContent = `${totalGateCardQty} ใบ (200 บ./ใบ)`;
+  if (elPending) elPending.innerHTML = `${pendingPayments.length} <span class="text-xs font-normal text-slate-500">รายการ</span>`;
+  if (elRate) elRate.textContent = `${paymentRate}%`;
+  if (elPaidSub) elPaidSub.textContent = `${paidCount} จาก ${totalHouses} หลัง`;
+  if (elYearBadge) elYearBadge.textContent = `ปี ${cur.yearBe} (${cur.yearAd})`;
+
+  // 1. Monthly Revenue Stacked Bar Chart (#monthlyRevenueChart)
+  const monthlyCanvas = document.getElementById("monthlyRevenueChart");
+  if (monthlyCanvas && window.Chart) {
+    const shortMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const baseData = new Array(12).fill(0);
+    const gateData = new Array(12).fill(0);
+    const lateData = new Array(12).fill(0);
+
+    approvedPayments.forEach((p) => {
+      let mIdx = -1;
+      let yr = cur.yearAd;
+      if (p.periodMonth && p.periodYear) {
+        mIdx = Number(p.periodMonth) - 1;
+        yr = Number(p.periodYear);
+      } else if (p.monthKey && p.monthKey.includes("-")) {
+        const parts = p.monthKey.split("-");
+        yr = parseInt(parts[0], 10);
+        mIdx = parseInt(parts[1], 10) - 1;
+      } else if (p.paymentDate && p.paymentDate.includes("-")) {
+        const parts = p.paymentDate.split("-");
+        yr = parseInt(parts[0], 10);
+        mIdx = parseInt(parts[1], 10) - 1;
+      }
+      if (yr === cur.yearAd && mIdx >= 0 && mIdx < 12) {
+        baseData[mIdx] += Number(p.baseFee) || 0;
+        gateData[mIdx] += Number(p.gateCardAmount) || 0;
+        lateData[mIdx] += Number(p.lateFee) || 0;
+      }
+    });
+
+    if (monthlyRevenueChartInstance) monthlyRevenueChartInstance.destroy();
+    monthlyRevenueChartInstance = new Chart(monthlyCanvas, {
+      type: "bar",
       data: {
-        labels: ["ชำระแล้ว", "ค้างชำระ"],
+        labels: shortMonths,
         datasets: [
           {
-            data: [paidHouses, unpaidHouses],
-            backgroundColor: ["#16a34a", "#dc2626"],
+            label: "ค่าส่วนกลางปกติ",
+            data: baseData,
+            backgroundColor: "#16a34a",
+            borderRadius: 4
+          },
+          {
+            label: "ค่าบัตรผ่านประตู",
+            data: gateData,
+            backgroundColor: "#0284c7",
+            borderRadius: 4
+          },
+          {
+            label: "ค่าปรับล่าช้า",
+            data: lateData,
+            backgroundColor: "#dc2626",
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { font: { family: "Prompt", size: 11 }, usePointStyle: true }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y || 0).toLocaleString()} บาท`
+            }
+          }
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { font: { family: "Prompt", size: 11 } } },
+          y: { stacked: true, beginAtZero: true, ticks: { font: { family: "Prompt", size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // 2. Status Doughnut Chart (#statusPieChart)
+  const pieCanvas = document.getElementById("statusPieChart");
+  if (pieCanvas && window.Chart) {
+    if (statusPieChartInstance) statusPieChartInstance.destroy();
+    const hasAnyData = paidCount + pendingHouseCount + unpaidCount > 0;
+    statusPieChartInstance = new Chart(pieCanvas, {
+      type: "doughnut",
+      data: {
+        labels: hasAnyData ? ["ชำระแล้ว", "รอตรวจสอบสลิป", "ค้างชำระ"] : ["ยังไม่มีข้อมูลบ้านในระบบ"],
+        datasets: [
+          {
+            data: hasAnyData ? [paidCount, pendingHouseCount, unpaidCount] : [1],
+            backgroundColor: hasAnyData ? ["#16a34a", "#f59e0b", "#dc2626"] : ["#e2e8f0"],
             borderWidth: 0
           }
         ]
@@ -3798,9 +3922,12 @@ function renderAdminOverview() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: "bottom", labels: { font: { family: "Prompt", size: 12 } } }
+          legend: {
+            position: "bottom",
+            labels: { font: { family: "Prompt", size: 11 }, usePointStyle: true }
+          }
         },
-        cutout: "70%"
+        cutout: "68%"
       }
     });
   }
