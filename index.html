@@ -24,7 +24,7 @@
   <!-- FontAwesome CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- QRCode.js CDN for Dynamic PromptPay QR -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
@@ -293,7 +293,7 @@
 
         <!-- 16:9 Aspect Ratio Carousel Container -->
         <div id="carouselWrapper" class="relative aspect-video w-full max-h-[480px] bg-slate-900 overflow-hidden select-none cursor-pointer group">
-          <div id="slidesTrack" class="w-full h-full relative"></div>
+          <div id="slidesTrack" class="flex w-full h-full transition-transform duration-500 ease-out"></div>
 
           <!-- Controls -->
           <button type="button" id="carouselOverlayPrevBtn" class="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white backdrop-blur-md flex items-center justify-center text-sm shadow-lg transition-all opacity-0 group-hover:opacity-100 z-20">
@@ -2750,6 +2750,7 @@ async function loadStateFromStorage() {
         if (!Array.isArray(appState.houses)) appState.houses = [];
         if (!Array.isArray(appState.payments)) appState.payments = [];
         if (!Array.isArray(appState.repairs)) appState.repairs = [];
+        if (!Array.isArray(appState.newsSlides) || appState.newsSlides.length === 0) appState.newsSlides = JSON.parse(JSON.stringify(DEFAULT_NEWS_SLIDES));
         return true;
       }
     }
@@ -2766,6 +2767,7 @@ async function loadStateFromStorage() {
       if (!Array.isArray(appState.houses)) appState.houses = [];
       if (!Array.isArray(appState.payments)) appState.payments = [];
       if (!Array.isArray(appState.repairs)) appState.repairs = [];
+        if (!Array.isArray(appState.newsSlides) || appState.newsSlides.length === 0) appState.newsSlides = JSON.parse(JSON.stringify(DEFAULT_NEWS_SLIDES));
       return true;
     }
   } catch (err) {
@@ -3012,6 +3014,7 @@ function initNewsSlider() {
   const tagBadge = document.getElementById("slideTagBadge");
 
   if (!track) return;
+  track.style.display = "flex";
   track.innerHTML = "";
   if (dotsContainer) dotsContainer.innerHTML = "";
 
@@ -3021,7 +3024,7 @@ function initNewsSlider() {
     slideEl.className = "min-w-full h-full relative cursor-pointer group flex-shrink-0";
     slideEl.onclick = () => openNewsDetailModal(idx);
     slideEl.innerHTML = `
-      <img src="${slide.image}" alt="${slide.title}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy">
+      <img src="${slide.image}" alt="${slide.title}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
       <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
     `;
     track.appendChild(slideEl);
@@ -3709,7 +3712,7 @@ function switchAdminSubTab(tabName) {
   }
 
   // Trigger tab-specific renders
-  if (tabName === "overview") renderAdminOverview();
+  if (tabName === "overview") requestAnimationFrame(() => renderAdminOverview());
   if (tabName === "slips") renderAdminSlips();
   if (tabName === "houses") renderAdminHouses();
   if (tabName === "unpaid") renderAdminUnpaid();
@@ -3901,6 +3904,17 @@ function renderAdminOverview() {
     });
   }
 
+  // Fallback Canvas 2D Bar Chart if Chart.js CDN is offline/blocked
+  if (monthlyCanvas && !window.Chart) {
+    const shortMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const totals = new Array(12).fill(0);
+    approvedPayments.forEach((p) => {
+      let mIdx = p.periodMonth ? Number(p.periodMonth) - 1 : -1;
+      if (mIdx >= 0 && mIdx < 12) totals[mIdx] += Number(p.grandTotal) || 0;
+    });
+    drawFallbackBarChart(monthlyCanvas, shortMonths, totals);
+  }
+
   // 2. Status Doughnut Chart (#statusPieChart)
   const pieCanvas = document.getElementById("statusPieChart");
   if (pieCanvas && window.Chart) {
@@ -3930,7 +3944,90 @@ function renderAdminOverview() {
         cutout: "68%"
       }
     });
+  } else if (pieCanvas && !window.Chart) {
+    drawFallbackDoughnutChart(pieCanvas, paidCount, pendingHouseCount, unpaidCount);
   }
+}
+
+function drawFallbackBarChart(canvas, labels, values) {
+  const parent = canvas.parentElement;
+  const w = Math.max(parent?.clientWidth || 500, 320);
+  const h = Math.max(parent?.clientHeight || 250, 220);
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+
+  const padL = 48, padR = 16, padT = 20, padB = 34;
+  const chartW = w - padL - padR;
+  const chartH = h - padT - padB;
+  const maxVal = Math.max(...values, 1000);
+
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.fillStyle = "#64748b";
+  ctx.font = "11px sans-serif";
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH * i) / 4;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(w - padR, y);
+    ctx.stroke();
+    const v = Math.round(maxVal * (1 - i / 4));
+    ctx.fillText(v.toLocaleString(), 4, y + 4);
+  }
+
+  const slotW = chartW / labels.length;
+  const barW = Math.max(12, slotW * 0.56);
+  labels.forEach((lbl, i) => {
+    const x = padL + i * slotW + (slotW - barW) / 2;
+    const barH = (values[i] / maxVal) * chartH;
+    const y = padT + chartH - barH;
+    ctx.fillStyle = "#16a34a";
+    ctx.fillRect(x, y, barW, Math.max(barH, 2));
+    ctx.fillStyle = "#475569";
+    ctx.textAlign = "center";
+    ctx.fillText(lbl, x + barW / 2, h - 12);
+  });
+}
+
+function drawFallbackDoughnutChart(canvas, paid, pending, unpaid) {
+  const parent = canvas.parentElement;
+  const w = Math.max(parent?.clientWidth || 260, 220);
+  const h = Math.max(parent?.clientHeight || 220, 200);
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h / 2 - 14;
+  const r = Math.min(w, h) * 0.34;
+  const total = paid + pending + unpaid;
+  const segments = total > 0
+    ? [
+        { val: paid, color: "#16a34a", label: "ชำระแล้ว" },
+        { val: pending, color: "#f59e0b", label: "รอตรวจ" },
+        { val: unpaid, color: "#dc2626", label: "ค้างชำระ" }
+      ]
+    : [{ val: 1, color: "#cbd5e1", label: "ไม่มีข้อมูล" }];
+
+  let startAngle = -Math.PI / 2;
+  const sum = total > 0 ? total : 1;
+  segments.forEach((seg) => {
+    if (seg.val <= 0) return;
+    const slice = (seg.val / sum) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+    ctx.arc(cx, cy, r * 0.62, startAngle + slice, startAngle, true);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    startAngle += slice;
+  });
+
+  ctx.fillStyle = "#334155";
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`ชำระ ${paid} | รอ ${pending} | ค้าง ${unpaid}`, cx, h - 10);
 }
 
 // ==========================================
