@@ -2460,142 +2460,13 @@
 // ==========================================
 const DEFAULT_NEWS_SLIDES = [];
 
-const DEFAULT_HOUSES = Array.from({ length: 85 }, (_, i) => {
-  const houseNo = `88/${i + 1}`;
-  const ownerNames = [
-    "คุณสมชาย ใจดี", "คุณวิภาวรรณ สุขุม", "คุณณัฐพล มั่งมี", "คุณพรทิพย์ สดใส", "คุณเกรียงไกร ชัยชนะ",
-    "คุณสุชาดา รัตนมณี", "คุณชาญชัย มีทรัพย์", "คุณศิริพร บุญเสริม", "คุณธนกร วัฒนา", "คุณปิยะดา รุ่งเรือง",
-    "คุณอนุสรณ์ พงษ์ศิริ", "คุณนงนุช เจริญสุข", "คุณพิเชษฐ์ ลาภทวี", "คุณวรรณภา สวัสดิ์", "คุณกิตติศักดิ์ พานิช"
-  ];
-  const name = ownerNames[i % ownerNames.length];
-  // Mark a realistic mix of paid and unpaid houses for demonstration
-  // e.g. about 18 unpaid houses in current month
-  const isUnpaidDemo = [3, 7, 12, 18, 22, 27, 34, 39, 44, 48, 53, 59, 64, 71, 75, 79, 82, 85].includes(i + 1);
-  return {
-    houseNo: houseNo,
-    ownerName: name,
-    phone: `08${(10000000 + i * 111111).toString().slice(0, 8)}`,
-    status: isUnpaidDemo ? "unpaid" : "paid",
-    lastPaidMonth: isUnpaidDemo ? "2026-10" : "2026-11",
-    totalPaidAmount: isUnpaidDemo ? 4000 : 4800,
-    outstandingMonths: isUnpaidDemo ? ["2026-11"] : []
-  };
-});
+const DEFAULT_HOUSES = [];
 
 const DEFAULT_STATE = {
   houses: DEFAULT_HOUSES,
-  payments: [
-    {
-      id: "REC-2569-11-001",
-      houseNo: "88/1",
-      ownerName: "คุณสมชาย ใจดี",
-      phone: "0812345678",
-      feeType: "monthly",
-      period: "พฤศจิกายน 2569",
-      monthKey: "2026-11",
-      paymentDate: "2026-11-05",
-      baseFee: 400,
-      gateCardQty: 0,
-      gateCardAmount: 0,
-      lateFee: 0,
-      grandTotal: 400,
-      transferChannel: "bbl",
-      slipUrl: "",
-      status: "approved",
-      approvedAt: "2026-11-05 14:30",
-      createdAt: "2026-11-05 14:15"
-    },
-    {
-      id: "REC-2569-11-002",
-      houseNo: "88/2",
-      ownerName: "คุณวิภาวรรณ สุขุม",
-      phone: "0898765432",
-      feeType: "monthly",
-      period: "พฤศจิกายน 2569",
-      monthKey: "2026-11",
-      paymentDate: "2026-11-07",
-      baseFee: 400,
-      gateCardQty: 1,
-      gateCardAmount: 200,
-      lateFee: 0,
-      grandTotal: 600,
-      transferChannel: "promptpay",
-      slipUrl: "",
-      status: "approved",
-      approvedAt: "2026-11-07 10:20",
-      createdAt: "2026-11-07 10:10"
-    },
-    {
-      id: "REC-2569-11-003",
-      houseNo: "88/5",
-      ownerName: "คุณเกรียงไกร ชัยชนะ",
-      phone: "0865554321",
-      feeType: "monthly",
-      period: "พฤศจิกายน 2569",
-      monthKey: "2026-11",
-      paymentDate: "2026-11-08",
-      baseFee: 400,
-      gateCardQty: 0,
-      gateCardAmount: 0,
-      lateFee: 0,
-      grandTotal: 400,
-      transferChannel: "promptpay",
-      slipUrl: "",
-      status: "pending",
-      createdAt: "2026-11-08 09:45"
-    }
-  ],
-  repairs: [
-    {
-      id: "REP-2569-11-001",
-      houseNo: "88/12",
-      reporterName: "คุณณัฐพล มั่งมี",
-      phone: "0812345611",
-      category: "streetlight",
-      urgency: "urgent",
-      location: "เสาไฟหน้าบ้าน 88/12 ซอย 2",
-      description: "หลอดไฟส่องสว่างริมถนนดับมา 2 คืนแล้ว ช่วงหัวค่ำซอยค่อนข้างมืด เกรงว่าจะไม่ปลอดภัย",
-      photoUrl: "",
-      status: "in_progress",
-      assignee: "ช่างประจำหมู่บ้าน / ฝ่ายซ่อมบำรุง",
-      committeeNote: "คณะกรรมการรับเรื่องและลงพื้นที่ตรวจสอบแล้ว เบิกหลอดไฟ LED ใหม่ เตรียมเปลี่ยนให้เย็นวันนี้",
-      createdAt: "2026-11-19T18:45:00",
-      updatedAt: "2026-11-20T10:15:00"
-    },
-    {
-      id: "REP-2569-11-002",
-      houseNo: "88/25",
-      reporterName: "คุณวิภาวรรณ สุขุม",
-      phone: "0898765424",
-      category: "parking",
-      urgency: "normal",
-      location: "บริเวณทางเลี้ยวซอย 3",
-      description: "มีรถยนต์จอดซ้อนคันบริเวณหัวมุมทางเลี้ยว ทำให้รถสวนทางและรถขยะเข้า-ออกลำบาก รบกวนกรรมการช่วยตักเตือนด้วยครับ",
-      photoUrl: "",
-      status: "pending",
-      assignee: "",
-      committeeNote: "",
-      createdAt: "2026-11-21T08:30:00",
-      updatedAt: "2026-11-21T08:30:00"
-    },
-    {
-      id: "REP-2569-11-003",
-      houseNo: "88/5",
-      reporterName: "คุณเกรียงไกร ชัยชนะ",
-      phone: "0865554321",
-      category: "road",
-      urgency: "normal",
-      location: "ถนนเมน ใกล้ป้อมยามทางออก",
-      description: "ฝาท่อระบายน้ำเหล็กมีเสียงดังเวลาขับรถผ่านและขยับตัวเล็กน้อย",
-      photoUrl: "",
-      status: "resolved",
-      assignee: "นายศุภฤกษ์ เรืองไทย",
-      committeeNote: "ดำเนินการเสริมยางรองฝาท่อและเชื่อมยึดจุดหลวมเรียบร้อยแล้ว",
-      createdAt: "2026-11-15T14:20:00",
-      updatedAt: "2026-11-17T16:00:00"
-    }
-  ],
-  newsSlides: DEFAULT_NEWS_SLIDES,
+  payments: [],
+  repairs: [],
+    newsSlides: DEFAULT_NEWS_SLIDES,
   adminConfig: {
     username: "admin",
     passwordHash: "green2admin",
@@ -2622,7 +2493,7 @@ let currentActiveReportMode = "monthly";
 const DB_NAME = "TheGreen2Database";
 const DB_VERSION = 1;
 const STORE_NAME = "app_state_store";
-const STATE_KEY = "thegreen2_global_state";
+const STATE_KEY = "thegreen2_global_state_v2";
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -3843,6 +3714,18 @@ function renderAdminHouses() {
   if (!tableBody) return;
 
   tableBody.innerHTML = "";
+  if (appState.houses.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center py-10 text-slate-400">
+          <i class="fa-solid fa-house-circle-plus text-3xl mb-2 text-slate-300"></i>
+          <div class="font-medium text-slate-600">ยังไม่มีข้อมูลบ้านเลขที่ในระบบ</div>
+          <div class="text-xs mt-1">คลิกปุ่ม "เพิ่มบ้านเลขที่ใหม่" ด้านบนเพื่อเริ่มต้นบันทึกข้อมูลจริง</div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
   appState.houses.forEach((h, idx) => {
     const tr = document.createElement("tr");
     tr.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors text-xs";
@@ -3860,13 +3743,65 @@ function renderAdminHouses() {
       </td>
       <td class="p-3 text-center text-slate-500">${h.lastPaidMonth || "-"}</td>
       <td class="p-3 text-center">
-        <button type="button" onclick="openEditMemberModal('${h.houseNo}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium">
-          <i class="fa-solid fa-pen-to-square mr-1"></i>แก้ไข
-        </button>
+        <div class="flex items-center justify-center gap-1">
+          <button type="button" onclick="openEditMemberModal('${h.houseNo}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium">
+            <i class="fa-solid fa-pen-to-square mr-1"></i>แก้ไข
+          </button>
+          <button type="button" onclick="deleteHouseRecord('${h.houseNo}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded text-xs font-medium" title="ลบบ้านเลขที่">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
       </td>
     `;
     tableBody.appendChild(tr);
   });
+}
+
+function populateHouseDropdowns() {
+  const houseSelect = document.getElementById("houseSelect");
+  if (houseSelect) {
+    houseSelect.innerHTML = appState.houses.length === 0
+      ? '<option value="">-- ยังไม่มีข้อมูลบ้านเลขที่ (แอดมินเพิ่มในระบบ) --</option>'
+      : '<option value="">-- เลือกบ้านเลขที่ --</option>';
+    appState.houses.forEach((h) => {
+      const opt = document.createElement("option");
+      opt.value = h.houseNo;
+      opt.textContent = h.ownerName ? `${h.houseNo} (${h.ownerName})` : h.houseNo;
+      houseSelect.appendChild(opt);
+    });
+  }
+
+  const repairHouseSelect = document.getElementById("repairHouseSelect");
+  if (repairHouseSelect) {
+    repairHouseSelect.innerHTML = '<option value="">-- เลือกบ้านเลขที่ --</option><option value="พื้นที่ส่วนกลาง">ไม่ระบุ / พื้นที่ส่วนกลาง</option>';
+    appState.houses.forEach((h) => {
+      const opt = document.createElement("option");
+      opt.value = h.houseNo;
+      opt.textContent = h.ownerName ? `${h.houseNo} (${h.ownerName})` : h.houseNo;
+      repairHouseSelect.appendChild(opt);
+    });
+  }
+}
+
+function openAddHouseModal() {
+  const modal = document.getElementById("editMemberModal");
+  const modalTitle = document.getElementById("editMemberModalTitle");
+  const origInput = document.getElementById("editMemberOriginalHouseNo");
+  const houseInput = document.getElementById("editMemberHouseNoInput");
+  const ownerInput = document.getElementById("editMemberOwnerInput");
+  const phoneInput = document.getElementById("editMemberPhoneInput");
+
+  if (modalTitle) modalTitle.textContent = "เพิ่มบ้านเลขที่ใหม่";
+  if (origInput) origInput.value = "";
+  if (houseInput) { houseInput.value = ""; houseInput.readOnly = false; }
+  if (ownerInput) ownerInput.value = "";
+  if (phoneInput) phoneInput.value = "";
+
+  setupEditMemberFormSubmit();
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
 }
 
 function openEditMemberModal(houseNo) {
@@ -3875,37 +3810,82 @@ function openEditMemberModal(houseNo) {
 
   const modal = document.getElementById("editMemberModal");
   const modalTitle = document.getElementById("editMemberModalTitle");
-  const editHouseNo = document.getElementById("editHouseNo");
-  const editOwnerName = document.getElementById("editOwnerName");
-  const editPhone = document.getElementById("editPhone");
-  const editStatus = document.getElementById("editStatus");
+  const origInput = document.getElementById("editMemberOriginalHouseNo");
+  const houseInput = document.getElementById("editMemberHouseNoInput");
+  const ownerInput = document.getElementById("editMemberOwnerInput");
+  const phoneInput = document.getElementById("editMemberPhoneInput");
 
-  if (modalTitle) modalTitle.textContent = `แก้ไขข้อมูลลูกบ้าน ${house.houseNo}`;
-  if (editHouseNo) editHouseNo.value = house.houseNo;
-  if (editOwnerName) editOwnerName.value = house.ownerName || "";
-  if (editPhone) editPhone.value = house.phone || "";
-  if (editStatus) editStatus.value = house.status || "unpaid";
+  if (modalTitle) modalTitle.textContent = `แก้ไขข้อมูลสมาชิก ${house.houseNo}`;
+  if (origInput) origInput.value = house.houseNo;
+  if (houseInput) houseInput.value = house.houseNo;
+  if (ownerInput) ownerInput.value = house.ownerName || "";
+  if (phoneInput) phoneInput.value = house.phone || "";
 
-  const form = document.getElementById("editMemberForm");
-  if (form) {
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      house.ownerName = editOwnerName.value.trim();
-      house.phone = editPhone.value.trim();
-      house.status = editStatus.value;
-      await saveStateToStorage();
-      closeEditMemberModal();
-      renderAdminHouses();
-      renderAdminUnpaid();
-      updateAdminBadges();
-      showToast(`บันทึกข้อมูล ${house.houseNo} สำเร็จ`, "success");
-    };
-  }
-
+  setupEditMemberFormSubmit();
   if (modal) {
     modal.classList.remove("hidden");
     modal.classList.add("flex");
   }
+}
+
+function setupEditMemberFormSubmit() {
+  const form = document.getElementById("editMemberForm");
+  if (!form) return;
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const origHouseNo = document.getElementById("editMemberOriginalHouseNo").value.trim();
+    const newHouseNo = document.getElementById("editMemberHouseNoInput").value.trim();
+    const ownerName = document.getElementById("editMemberOwnerInput").value.trim();
+    const phone = document.getElementById("editMemberPhoneInput").value.trim();
+
+    if (!newHouseNo) {
+      showToast("กรุณาระบุบ้านเลขที่", "warning");
+      return;
+    }
+
+    if (origHouseNo) {
+      const house = appState.houses.find((h) => h.houseNo === origHouseNo);
+      if (house) {
+        house.houseNo = newHouseNo;
+        house.ownerName = ownerName;
+        house.phone = phone;
+      }
+      showToast(`บันทึกข้อมูล ${newHouseNo} สำเร็จ`, "success");
+    } else {
+      if (appState.houses.some((h) => h.houseNo === newHouseNo)) {
+        showToast(`บ้านเลขที่ ${newHouseNo} มีอยู่ในระบบแล้ว`, "warning");
+        return;
+      }
+      appState.houses.push({
+        houseNo: newHouseNo,
+        ownerName: ownerName,
+        phone: phone,
+        status: "unpaid",
+        lastPaidMonth: "",
+        totalPaidAmount: 0,
+        outstandingMonths: []
+      });
+      showToast(`เพิ่มบ้านเลขที่ ${newHouseNo} สำเร็จ`, "success");
+    }
+
+    await saveStateToStorage();
+    closeEditMemberModal();
+    populateHouseDropdowns();
+    renderAdminHouses();
+    renderAdminUnpaid();
+    updateAdminBadges();
+  };
+}
+
+async function deleteHouseRecord(houseNo) {
+  if (!confirm(`ยืนยันการลบบ้านเลขที่ ${houseNo} ออกจากทะเบียน?`)) return;
+  appState.houses = appState.houses.filter((h) => h.houseNo !== houseNo);
+  await saveStateToStorage();
+  populateHouseDropdowns();
+  renderAdminHouses();
+  renderAdminUnpaid();
+  updateAdminBadges();
+  showToast(`ลบบ้านเลขที่ ${houseNo} เรียบร้อยแล้ว`, "info");
 }
 
 function closeEditMemberModal() {
@@ -5198,6 +5178,107 @@ document.addEventListener("DOMContentLoaded", async () => {
       setTimeout(() => {
         showToast("เชื่อมต่อฐานข้อมูลบนคลาวด์เรียบร้อยแล้ว", "success");
       }, 800);
+    };
+  }
+
+  // Toggle password visibility on Admin Login
+  const togglePassBtn = document.getElementById("togglePasswordVisibilityBtn");
+  const adminPassInput = document.getElementById("adminPasswordInput");
+  if (togglePassBtn && adminPassInput) {
+    togglePassBtn.onclick = () => {
+      const isPass = adminPassInput.type === "password";
+      adminPassInput.type = isPass ? "text" : "password";
+      togglePassBtn.innerHTML = isPass ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
+    };
+  }
+
+  // Add / Edit / Clear Member & Houses buttons
+  document.getElementById("openAddHouseModalBtn")?.addEventListener("click", openAddHouseModal);
+  document.getElementById("closeEditMemberModalBtn")?.addEventListener("click", closeEditMemberModal);
+  document.getElementById("cancelEditMemberBtn")?.addEventListener("click", closeEditMemberModal);
+  document.getElementById("clearSingleMemberFieldsBtn")?.addEventListener("click", () => {
+    const o = document.getElementById("editMemberOwnerInput");
+    const p = document.getElementById("editMemberPhoneInput");
+    if (o) o.value = "";
+    if (p) p.value = "";
+  });
+
+  // Confirm Clear Modal
+  const confirmClearModal = document.getElementById("confirmClearModal");
+  const closeConfirmClear = () => {
+    if (confirmClearModal) {
+      confirmClearModal.classList.add("hidden");
+      confirmClearModal.classList.remove("flex");
+    }
+  };
+  document.getElementById("clearAllMemberNamesBtn")?.addEventListener("click", () => {
+    if (confirmClearModal) {
+      confirmClearModal.classList.remove("hidden");
+      confirmClearModal.classList.add("flex");
+    }
+  });
+  document.getElementById("adminResetDataBtn")?.addEventListener("click", () => {
+    if (confirmClearModal) {
+      confirmClearModal.classList.remove("hidden");
+      confirmClearModal.classList.add("flex");
+    }
+  });
+  document.getElementById("closeConfirmClearModalBtn")?.addEventListener("click", closeConfirmClear);
+
+  document.getElementById("confirmClearMemberNamesOnlyBtn")?.addEventListener("click", async () => {
+    appState.houses.forEach((h) => { h.ownerName = ""; h.phone = ""; });
+    await saveStateToStorage();
+    populateHouseDropdowns();
+    renderAdminHouses();
+    closeConfirmClear();
+    showToast("ล้างชื่อสมาชิกและเบอร์โทรทั้งหมดเรียบร้อยแล้ว", "success");
+  });
+
+  document.getElementById("confirmResetCleanSystemBtn")?.addEventListener("click", async () => {
+    appState.payments = [];
+    appState.repairs = [];
+    appState.houses.forEach((h) => { h.status = "unpaid"; h.lastPaidMonth = ""; h.totalPaidAmount = 0; h.outstandingMonths = []; });
+    await saveStateToStorage();
+    updateAdminBadges();
+    renderAdminHouses();
+    renderAdminUnpaid();
+    renderAdminRepairs();
+    renderResidentRepairs();
+    closeConfirmClear();
+    showToast("ล้างประวัติชำระเงินและเรื่องร้องเรียนทั้งหมดเรียบร้อยแล้ว", "success");
+  });
+
+  document.getElementById("confirmDeleteAllHousesBtn")?.addEventListener("click", async () => {
+    appState.houses = [];
+    appState.payments = [];
+    appState.repairs = [];
+    await saveStateToStorage();
+    populateHouseDropdowns();
+    updateAdminBadges();
+    renderAdminHouses();
+    renderAdminUnpaid();
+    renderAdminRepairs();
+    renderResidentRepairs();
+    closeConfirmClear();
+    showToast("ลบข้อมูลบ้านเลขที่ สมาชิก และการร้องเรียนทั้งหมดเรียบร้อยแล้ว", "success");
+  });
+
+  // Change Admin Password Form
+  const changePassForm = document.getElementById("changeAdminPassForm");
+  if (changePassForm) {
+    changePassForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const newUser = document.getElementById("newAdminUserInput")?.value.trim();
+      const newPass = document.getElementById("newAdminPassInput")?.value.trim();
+      if (!newUser || !newPass) {
+        showToast("กรุณากรอกชื่อผู้ใช้และรหัสผ่านใหม่", "warning");
+        return;
+      }
+      appState.adminConfig.username = newUser;
+      appState.adminConfig.passwordHash = newPass;
+      await saveStateToStorage();
+      changePassForm.reset();
+      showToast("บันทึกรหัสผ่านผู้ดูแลระบบใหม่เรียบร้อยแล้ว", "success");
     };
   }
 
