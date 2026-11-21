@@ -4746,6 +4746,181 @@ function renderAdminSettings() {
   if (urlInput) {
     urlInput.value = appState.adminConfig.cloudScriptUrl || "";
   }
+  renderAdminNewsSlides();
+}
+
+function renderAdminNewsSlides() {
+  const listEl = document.getElementById("adminNewsSlidesList");
+  const countEl = document.getElementById("adminNewsSlideCount");
+  const slides = appState.newsSlides || DEFAULT_NEWS_SLIDES;
+  if (countEl) countEl.textContent = slides.length;
+  if (!listEl) return;
+
+  listEl.innerHTML = "";
+  if (slides.length === 0) {
+    listEl.innerHTML = '<div class="text-center py-4 text-xs text-slate-400">ยังไม่มีสไลด์ข่าวสาร</div>';
+    return;
+  }
+
+  slides.forEach((s, idx) => {
+    const item = document.createElement("div");
+    item.className = "flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-xl";
+    item.innerHTML = `
+      <img src="${s.image}" alt="${s.title}" class="w-20 h-11 object-cover rounded-lg border border-slate-200 flex-shrink-0">
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-bold text-slate-900 truncate">${idx + 1}. ${s.title}</div>
+        <div class="text-[11px] text-slate-500 truncate">${s.tag || "ข่าวสาร"} • ${s.desc || ""}</div>
+      </div>
+      <button type="button" onclick="deleteNewsSlide(${idx})" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold flex-shrink-0" title="ลบสไลด์นี้">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    `;
+    listEl.appendChild(item);
+  });
+}
+
+async function deleteNewsSlide(idx) {
+  const slides = appState.newsSlides || [];
+  if (slides.length <= 1) {
+    showToast("ควรมีข่าวสารแสดงอย่างน้อย 1 รายการ", "warning");
+    return;
+  }
+  if (!confirm(`ต้องการลบข่าวสาร "${slides[idx]?.title}" ใช่หรือไม่?`)) return;
+  slides.splice(idx, 1);
+  appState.newsSlides = slides;
+  await saveStateToStorage();
+  initNewsSlider();
+  renderAdminNewsSlides();
+  showToast("ลบสไลด์ข่าวสารเรียบร้อยแล้ว", "info");
+}
+
+function initAdminSettingsForms() {
+  // 1. Add News Slide Form
+  const addSlideForm = document.getElementById("addNewsSlideForm");
+  if (addSlideForm) {
+    addSlideForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const title = document.getElementById("newSlideTitleInput")?.value.trim();
+      const tag = document.getElementById("newSlideTagInput")?.value.trim() || "ข่าวสารหมู่บ้าน";
+      const desc = document.getElementById("newSlideDescInput")?.value.trim() || "";
+      const fileInput = document.getElementById("newSlideFileInput");
+
+      if (!title) {
+        showToast("กรุณากรอกหัวข้อประกาศ", "warning");
+        return;
+      }
+
+      const saveSlide = async (imgDataUrl) => {
+        if (!Array.isArray(appState.newsSlides)) {
+          appState.newsSlides = JSON.parse(JSON.stringify(DEFAULT_NEWS_SLIDES));
+        }
+        appState.newsSlides.unshift({
+          title,
+          tag,
+          desc,
+          image: imgDataUrl || (DEFAULT_NEWS_SLIDES[0] ? DEFAULT_NEWS_SLIDES[0].image : "")
+        });
+        await saveStateToStorage();
+        initNewsSlider();
+        renderAdminNewsSlides();
+        addSlideForm.reset();
+        showToast("เพิ่มสไลด์ข่าวสาร 16:9 เรียบร้อยแล้ว", "success");
+      };
+
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let w = img.width;
+            let h = img.height;
+            const maxW = 1280;
+            if (w > maxW) {
+              h = Math.round((h * maxW) / w);
+              w = maxW;
+            }
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            saveSlide(canvas.toDataURL("image/jpeg", 0.78));
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        await saveSlide("");
+      }
+    };
+  }
+
+  // 2. Reset News Slides Button
+  const resetSlidesBtn = document.getElementById("resetNewsSlidesBtn");
+  if (resetSlidesBtn) {
+    resetSlidesBtn.onclick = async () => {
+      if (!confirm("ต้องการรีเซ็ตสไลด์ข่าวสารกลับเป็น 10 ข่าวเริ่มต้นใช่หรือไม่?")) return;
+      appState.newsSlides = JSON.parse(JSON.stringify(DEFAULT_NEWS_SLIDES));
+      await saveStateToStorage();
+      initNewsSlider();
+      renderAdminNewsSlides();
+      showToast("รีเซ็ตสไลด์ข่าวสารเป็นค่าเริ่มต้นเรียบร้อยแล้ว", "success");
+    };
+  }
+
+  // 3. Bulk Generate House Numbers Form
+  const bulkForm = document.getElementById("bulkGenerateHousesForm");
+  if (bulkForm) {
+    bulkForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const prefix = document.getElementById("bulkPrefixInput")?.value.trim() || "88/";
+      const startNum = parseInt(document.getElementById("bulkStartInput")?.value, 10);
+      const endNum = parseInt(document.getElementById("bulkEndInput")?.value, 10);
+
+      if (isNaN(startNum) || isNaN(endNum) || startNum < 1 || endNum < startNum) {
+        showToast("กรุณาระบุช่วงเลขที่บ้านให้ถูกต้อง (เริ่มต้นต้องน้อยกว่าหรือเท่ากับสิ้นสุด)", "warning");
+        return;
+      }
+      if (endNum - startNum > 500) {
+        showToast("สร้างได้สูงสุดครั้งละ 500 หลัง", "warning");
+        return;
+      }
+
+      if (!Array.isArray(appState.houses)) appState.houses = [];
+      const existingSet = new Set(appState.houses.map((h) => h.houseNo));
+      let addedCount = 0;
+
+      for (let i = startNum; i <= endNum; i++) {
+        const houseNo = `${prefix}${i}`;
+        if (!existingSet.has(houseNo)) {
+          appState.houses.push({
+            houseNo,
+            ownerName: "",
+            phone: "",
+            status: "unpaid",
+            lastPaidMonth: "",
+            totalPaidAmount: 0,
+            outstandingMonths: []
+          });
+          existingSet.add(houseNo);
+          addedCount++;
+        }
+      }
+
+      await saveStateToStorage();
+      populateHouseDropdowns();
+      renderAdminHouses();
+      renderAdminUnpaid();
+      updateAdminBadges();
+      syncHousesToGoogleAppsScript();
+
+      if (addedCount > 0) {
+        showToast(`สร้างเลขที่บ้านอัตโนมัติเพิ่ม ${addedCount} หลัง (${prefix}${startNum} - ${prefix}${endNum}) สำเร็จ`, "success");
+      } else {
+        showToast(`บ้านเลขที่ในช่วง ${prefix}${startNum} - ${prefix}${endNum} มีอยู่ในระบบครบแล้ว`, "info");
+      }
+    };
+  }
 }
 
 function updateCloudHeaderStatus(text, isSyncing = false) {
@@ -5460,6 +5635,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Setup Admin Login & Subtabs
   initAdminLogin();
+  initAdminSettingsForms();
 
   // Setup Main Navigation buttons
   const navPayBtn = document.getElementById("navPayBtn");
