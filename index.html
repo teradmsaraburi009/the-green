@@ -3845,6 +3845,8 @@ async function approveSlip(paymentId) {
   renderAdminSlips();
   renderAdminUnpaid();
   showToast(`อนุมัติสลิปบ้านเลขที่ ${p.houseNo} เรียบร้อยแล้ว`, "success");
+  postToCloud({ action: "updateSlipStatus", id: p.id, status: "approved" });
+  syncHousesToGoogleAppsScript();
 }
 
 async function rejectSlip(paymentId) {
@@ -3857,6 +3859,7 @@ async function rejectSlip(paymentId) {
   updateAdminBadges();
   renderAdminSlips();
   showToast(`ปฏิเสธรายการสลิปบ้านเลขที่ ${p.houseNo} แล้ว`, "warning");
+  postToCloud({ action: "updateSlipStatus", id: p.id, status: "rejected" });
 }
 
 // ==========================================
@@ -4054,6 +4057,7 @@ async function deleteHouseRecord(houseNo) {
   renderAdminHouses();
   renderAdminUnpaid();
   updateAdminBadges();
+  syncHousesToGoogleAppsScript();
   showToast(`ลบบ้านเลขที่ ${houseNo} เรียบร้อยแล้ว`, "info");
 }
 
@@ -4697,8 +4701,10 @@ function renderReportContent() {
 }
 
 // ==========================================
-// 18. ADMIN SETTINGS & CLOUD SYNC
+// 18. ADMIN SETTINGS & REAL-TIME CLOUD SYNC (PC <-> MOBILE)
 // ==========================================
+let isCloudSyncing = false;
+
 function renderAdminSettings() {
   const urlInput = document.getElementById("cloudScriptUrlInput");
   if (urlInput) {
@@ -4706,25 +4712,209 @@ function renderAdminSettings() {
   }
 }
 
-async function syncPaymentToGoogleAppsScript(paymentData) {
-  const scriptUrl = appState.adminConfig.cloudScriptUrl;
-  if (!scriptUrl) return;
+function updateCloudHeaderStatus(text, isSyncing = false) {
+  const label = document.getElementById("cloudSyncHeaderLabel");
+  const icon = document.getElementById("cloudSyncHeaderIcon");
+  if (label) label.textContent = text;
+  if (icon) {
+    if (isSyncing) {
+      icon.className = "fa-solid fa-arrows-rotate fa-spin text-amber-400";
+    } else {
+      icon.className = "fa-solid fa-cloud-arrow-up text-emerald-400";
+    }
+  }
+}
+
+function normalizeCloudPayment(cp) {
+  const monthNamesThai = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+  const mIdx = (Number(cp.periodMonth) || 1) - 1;
+  const yrAd = Number(cp.periodYear) || 2026;
+  const yrBe = yrAd > 2400 ? yrAd : yrAd + 543;
+  const periodStr = cp.period || `${monthNamesThai[Math.max(0, Math.min(11, mIdx))]} ${yrBe}`;
+  const monthKey = cp.monthKey || `${yrAd > 2400 ? yrAd - 543 : yrAd}-${String(mIdx + 1).padStart(2, "0")}`;
+
+  return {
+    id: String(cp.id || cp.receiptNo || ""),
+    houseNo: String(cp.houseNo || ""),
+    ownerName: String(cp.ownerName || ""),
+    phone: String(cp.phone || ""),
+    feeType: cp.feeType || cp.paymentType || "monthly",
+    period: periodStr,
+    monthKey: monthKey,
+    paymentDate: String(cp.paymentDate || ""),
+    baseFee: Number(cp.baseFee) || 0,
+    gateCardQty: Number(cp.gateCardQty) || 0,
+    gateCardAmount: Number(cp.gateCardAmount !== undefined ? cp.gateCardAmount : cp.gateCardFee) || 0,
+    lateFee: Number(cp.lateFee) || 0,
+    grandTotal: Number(cp.grandTotal !== undefined ? cp.grandTotal : cp.totalAmount) || 0,
+    transferChannel: cp.transferChannel || "promptpay",
+    slipUrl: cp.slipUrl || cp.slipData || "",
+    status: cp.status || "pending",
+    createdAt: cp.createdAt || ""
+  };
+}
+
+function refreshActiveViewsAfterSync() {
+  populateHouseDropdowns();
+  updateAdminBadges();
+  renderResidentHistory();
+  renderResidentRepairs();
+  if (isAdminLoggedIn) {
+    renderAdminOverview();
+    renderAdminSlips();
+    renderAdminHouses();
+    renderAdminUnpaid();
+    renderAdminRepairs();
+    renderAdminReports();
+  }
+}
+
+async function fetchCloudData(silent = true) {
+  const scriptUrl = appState.adminConfig?.cloudScriptUrl;
+  if (!scriptUrl || !navigator.onLine || isCloudSyncing) return false;
+
+  isCloudSyncing = true;
+  updateCloudHeaderStatus("กำลังซิงค์...", true);
 
   try {
-    const payload = {
-      action: "addPayment",
-      payment: paymentData
-    };
+    const sep = scriptUrl.includes("?") ? "&" : "?";
+    const resp = await fetch(`${scriptUrl}${sep}action=getData&t=${Date.now()}`, {
+      method: "GET",
+      cache: "no-store"
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    if (data && data.status === "success") {
+      if (Array.isArray(data.payments)) {
+        appState.payments = data.payments.map(normalizeCloudPayment);
+      }
+
+      if (Array.isArray(data.houses)) {
+        const approvedHouseSet = new Set(
+          appState.payments.filter((p) => p.status === "approved").map((p) => p.houseNo)
+        );
+        appState.houses = data.houses.map((h) => ({
+          houseNo: String(h.houseNo || h.id || ""),
+          ownerName: String(h.ownerName || ""),
+          phone: String(h.phone || ""),
+          status: h.status || (approvedHouseSet.has(String(h.houseNo || h.id)) ? "paid" : "unpaid"),
+          lastPaidMonth: h.lastPaidMonth || "",
+          totalPaidAmount: Number(h.totalPaidAmount) || 0,
+          outstandingMonths: h.outstandingMonths || []
+        }));
+      }
+
+      if (Array.isArray(data.repairs)) {
+        appState.repairs = data.repairs;
+      }
+
+      await saveStateToStorage();
+      refreshActiveViewsAfterSync();
+
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      updateCloudHeaderStatus(`ซิงค์แล้ว ${timeStr}`, false);
+      if (!silent) showToast("ดึงข้อมูลล่าสุดจากคลาวด์สำเร็จ (คอมและมือถือตรงกันแล้ว)", "success");
+      isCloudSyncing = false;
+      return true;
+    }
+  } catch (err) {
+    console.warn("Cloud fetch error:", err);
+    updateCloudHeaderStatus("ซิงค์คลาวด์", false);
+    if (!silent) showToast("ไม่สามารถดึงข้อมูลจากคลาวด์ได้ กรุณาตรวจสอบ URL", "error");
+  }
+  isCloudSyncing = false;
+  return false;
+}
+
+async function postToCloud(payload) {
+  const scriptUrl = appState.adminConfig?.cloudScriptUrl;
+  if (!scriptUrl || !navigator.onLine) return false;
+
+  try {
     await fetch(scriptUrl, {
       method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     });
-    console.log("Background cloud sync submitted to Google Apps Script");
+    return true;
   } catch (err) {
-    console.warn("Cloud sync error:", err);
+    try {
+      await fetch(scriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      return true;
+    } catch (err2) {
+      console.warn("Cloud post error:", err2);
+      return false;
+    }
   }
+}
+
+async function syncPaymentToGoogleAppsScript(p) {
+  const parts = (p.paymentDate || "").split("-");
+  const periodYear = parts.length >= 1 && parts[0] ? parseInt(parts[0]) : 2026;
+  const periodMonth = parts.length >= 2 && parts[1] ? parseInt(parts[1]) : 1;
+
+  return postToCloud({
+    action: "createPayment",
+    payment: {
+      id: p.id,
+      receiptNo: p.id,
+      houseNo: p.houseNo,
+      ownerName: p.ownerName,
+      phone: p.phone,
+      paymentType: p.feeType || "monthly",
+      periodMonth: periodMonth,
+      periodYear: periodYear,
+      paymentDate: p.paymentDate,
+      baseFee: p.baseFee || 0,
+      gateCardFee: p.gateCardAmount || 0,
+      lateFee: p.lateFee || 0,
+      totalAmount: p.grandTotal || 0,
+      status: p.status || "pending",
+      note: p.period || "",
+      createdAt: p.createdAt || new Date().toISOString(),
+      slipData: p.slipUrl || ""
+    }
+  });
+}
+
+async function syncAllToCloud(silent = false) {
+  if (!appState.adminConfig?.cloudScriptUrl) {
+    if (!silent) showToast("กรุณากรอก URL ของ Google Apps Script ก่อน", "warning");
+    return false;
+  }
+  updateCloudHeaderStatus("กำลังอัปโหลด...", true);
+  const ok = await postToCloud({
+    action: "syncAll",
+    houses: appState.houses,
+    payments: appState.payments.map((p) => ({
+      ...p,
+      receiptNo: p.id,
+      paymentType: p.feeType,
+      gateCardFee: p.gateCardAmount,
+      totalAmount: p.grandTotal,
+      slipData: p.slipUrl
+    })),
+    repairs: appState.repairs || []
+  });
+  if (ok) {
+    const now = new Date();
+    updateCloudHeaderStatus(`ซิงค์แล้ว ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`, false);
+    if (!silent) showToast("อัปโหลดข้อมูลทั้งหมดขึ้น Google Sheets สำเร็จ", "success");
+  } else {
+    updateCloudHeaderStatus("ซิงค์คลาวด์", false);
+    if (!silent) showToast("อัปโหลดไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ", "error");
+  }
+  return ok;
 }
 
 // ==========================================
@@ -5096,7 +5286,7 @@ function openManageRepairModal(repairId) {
     renderAdminRepairs();
     renderResidentRepairs();
     showToast(`อัปเดตสถานะเรื่อง ${r.id} เรียบร้อยแล้ว`, "success");
-    syncRepairToGoogleAppsScript(r);
+    syncRepairToGoogleAppsScript(r, "updateRepairStatus");
   };
 
   document.getElementById("copySingleRepairLineBtn").onclick = () => copySingleRepairLine(r.id);
@@ -5201,19 +5391,8 @@ function exportRepairsCsv() {
   showToast("ส่งออกไฟล์ CSV รายการแจ้งซ่อมสำเร็จ", "success");
 }
 
-async function syncRepairToGoogleAppsScript(repairData) {
-  const scriptUrl = appState.adminConfig.cloudScriptUrl;
-  if (!scriptUrl) return;
-  try {
-    await fetch(scriptUrl, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "addRepair", repair: repairData })
-    });
-  } catch (err) {
-    console.warn("Repair cloud sync error:", err);
-  }
+async function syncRepairToGoogleAppsScript(repairData, actionName = "addRepair") {
+  return postToCloud({ action: actionName, repair: repairData });
 }
 
 // ==========================================
@@ -5339,16 +5518,44 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (overlayPrev) overlayPrev.onclick = prevSlide;
   if (overlayNext) overlayNext.onclick = nextSlide;
 
-  // Cloud Sync Header Button
+  // Cloud Sync Header Button (Real Pull from Google Sheets)
   const cloudSyncHeaderBtn = document.getElementById("cloudSyncHeaderBtn");
   if (cloudSyncHeaderBtn) {
     cloudSyncHeaderBtn.onclick = async () => {
-      showToast("กำลังเชื่อมต่อ Google Apps Script...", "info");
-      setTimeout(() => {
-        showToast("เชื่อมต่อฐานข้อมูลบนคลาวด์เรียบร้อยแล้ว", "success");
-      }, 800);
+      await fetchCloudData(false);
     };
   }
+
+  // Admin Settings Cloud Buttons
+  document.getElementById("saveCloudUrlBtn")?.addEventListener("click", async () => {
+    const val = document.getElementById("cloudScriptUrlInput")?.value.trim() || "";
+    appState.adminConfig.cloudScriptUrl = val;
+    await saveStateToStorage();
+    showToast("บันทึก URL ของ Google Apps Script สำเร็จ", "success");
+  });
+
+  document.getElementById("testCloudSyncBtn")?.addEventListener("click", async () => {
+    const val = document.getElementById("cloudScriptUrlInput")?.value.trim();
+    if (val) appState.adminConfig.cloudScriptUrl = val;
+    await fetchCloudData(false);
+  });
+
+  document.getElementById("uploadAllToCloudBtn")?.addEventListener("click", async () => {
+    const val = document.getElementById("cloudScriptUrlInput")?.value.trim();
+    if (val) appState.adminConfig.cloudScriptUrl = val;
+    await syncAllToCloud(false);
+  });
+
+  // Auto-sync from Cloud on startup, tab focus, and every 60 seconds while online
+  fetchCloudData(true);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && navigator.onLine) {
+      fetchCloudData(true);
+    }
+  });
+  setInterval(() => {
+    if (navigator.onLine) fetchCloudData(true);
+  }, 60000);
 
   // Toggle password visibility on Admin Login
   const togglePassBtn = document.getElementById("togglePasswordVisibilityBtn");
@@ -5401,6 +5608,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     populateHouseDropdowns();
     renderAdminHouses();
     closeConfirmClear();
+    syncHousesToGoogleAppsScript();
     showToast("ล้างชื่อสมาชิกและเบอร์โทรทั้งหมดเรียบร้อยแล้ว", "success");
   });
 
@@ -5415,6 +5623,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderAdminRepairs();
     renderResidentRepairs();
     closeConfirmClear();
+    syncAllToCloud(true);
     showToast("ล้างประวัติชำระเงินและเรื่องร้องเรียนทั้งหมดเรียบร้อยแล้ว", "success");
   });
 
@@ -5430,6 +5639,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderAdminRepairs();
     renderResidentRepairs();
     closeConfirmClear();
+    syncAllToCloud(true);
     showToast("ลบข้อมูลบ้านเลขที่ สมาชิก และการร้องเรียนทั้งหมดเรียบร้อยแล้ว", "success");
   });
 
