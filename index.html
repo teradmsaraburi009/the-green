@@ -3171,58 +3171,91 @@ function initPaymentForm() {
     };
   }
 
-  // Slip Upload & Image Compression
+  // Slip Upload & Image Compression (Fixed for #dropZone, #uploadPrompt, #uploadPreview, #previewImg)
+  const dropZone = document.getElementById("dropZone");
   const slipInput = document.getElementById("slipFileInput");
-  const slipPreviewContainer = document.getElementById("slipPreviewContainer");
-  const slipPreviewImg = document.getElementById("slipPreviewImg");
-  const slipFileName = document.getElementById("slipFileName");
+  const uploadPrompt = document.getElementById("uploadPrompt");
+  const uploadPreview = document.getElementById("uploadPreview");
+  const previewImg = document.getElementById("previewImg");
   const removeSlipBtn = document.getElementById("removeSlipBtn");
+
+  function handleSlipFile(file) {
+    if (!file || !file.type.startsWith("image/")) {
+      showToast("กรุณาเลือกไฟล์รูปภาพสลิปโอนเงินเท่านั้น", "warning");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 900;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        uploadedSlipBase64 = canvas.toDataURL("image/jpeg", 0.72);
+
+        if (previewImg) previewImg.src = uploadedSlipBase64;
+        if (uploadPrompt) uploadPrompt.classList.add("hidden");
+        if (uploadPreview) uploadPreview.classList.remove("hidden");
+        showToast("แนบสลิปโอนเงินเรียบร้อยแล้ว", "success");
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  if (dropZone && slipInput) {
+    dropZone.onclick = (e) => {
+      if (e.target.closest("#removeSlipBtn")) return;
+      slipInput.click();
+    };
+    dropZone.ondragover = (e) => {
+      e.preventDefault();
+      dropZone.classList.add("border-brand-500", "bg-brand-50/40");
+    };
+    dropZone.ondragleave = () => {
+      dropZone.classList.remove("border-brand-500", "bg-brand-50/40");
+    };
+    dropZone.ondrop = (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("border-brand-500", "bg-brand-50/40");
+      if (e.dataTransfer?.files?.length) {
+        handleSlipFile(e.dataTransfer.files[0]);
+      }
+    };
+  }
 
   if (slipInput) {
     slipInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          // Downscale via canvas to keep size under 150KB for fast IndexedDB storage
-          const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-          const maxDim = 1000;
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-
-          uploadedSlipBase64 = canvas.toDataURL("image/jpeg", 0.75);
-
-          if (slipPreviewImg) slipPreviewImg.src = uploadedSlipBase64;
-          if (slipFileName) slipFileName.textContent = `${file.name} (ขนาดถูกบีบอัดให้พอดี)`;
-          if (slipPreviewContainer) slipPreviewContainer.classList.remove("hidden");
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+      if (e.target.files && e.target.files[0]) {
+        handleSlipFile(e.target.files[0]);
+      }
     };
   }
 
   if (removeSlipBtn) {
-    removeSlipBtn.onclick = () => {
+    removeSlipBtn.onclick = (e) => {
+      e.stopPropagation();
       uploadedSlipBase64 = "";
       if (slipInput) slipInput.value = "";
-      if (slipPreviewContainer) slipPreviewContainer.classList.add("hidden");
+      if (previewImg) previewImg.src = "";
+      if (uploadPreview) uploadPreview.classList.add("hidden");
+      if (uploadPrompt) uploadPrompt.classList.remove("hidden");
     };
   }
 
@@ -3412,7 +3445,10 @@ function setupPaymentSubmit() {
     form.reset();
     uploadedSlipBase64 = "";
     window.waiveLateFee = false;
-    document.getElementById("slipPreviewContainer").classList.add("hidden");
+    document.getElementById("uploadPreview")?.classList.add("hidden");
+    document.getElementById("uploadPrompt")?.classList.remove("hidden");
+    const prevImgEl = document.getElementById("previewImg");
+    if (prevImgEl) prevImgEl.src = "";
     calculatePaymentTotal();
 
     // Auto sync to cloud in background
