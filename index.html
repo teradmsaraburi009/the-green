@@ -2597,6 +2597,48 @@ const DEFAULT_STATE = {
   currentActiveSlide: 0
 };
 
+const THAI_MONTHS_FULL = [
+  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+];
+
+function getCurrentMonthYear() {
+  const now = new Date();
+  return {
+    month: now.getMonth() + 1,
+    yearAd: now.getFullYear(),
+    yearBe: now.getFullYear() + 543,
+    monthKey: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+    labelThai: `${THAI_MONTHS_FULL[now.getMonth()]} ${now.getFullYear() + 543}`
+  };
+}
+
+function getSelectedPeriodLabel(monthSelectId, yearSelectId) {
+  const cur = getCurrentMonthYear();
+  const mVal = parseInt(document.getElementById(monthSelectId)?.value || cur.month, 10);
+  const yVal = parseInt(document.getElementById(yearSelectId)?.value || cur.yearAd, 10);
+  const mIdx = Math.max(0, Math.min(11, mVal - 1));
+  return {
+    month: mVal,
+    yearAd: yVal,
+    yearBe: yVal + 543,
+    monthKey: `${yVal}-${String(mVal).padStart(2, "0")}`,
+    labelThai: `${THAI_MONTHS_FULL[mIdx]} ${yVal + 543}`
+  };
+}
+
+function initDefaultCurrentPeriod() {
+  const cur = getCurrentMonthYear();
+  ["periodMonth", "houseFilterPeriodMonth", "unpaidFilterMonth", "reportMonthSelect"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = String(cur.month);
+  });
+  ["periodYear", "houseFilterPeriodYear", "unpaidFilterYear", "reportYearSelect"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = String(cur.yearAd);
+  });
+}
+
 let appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
 let isAdminLoggedIn = false;
 let currentSlideIndex = 0;
@@ -3403,23 +3445,20 @@ function setupPaymentSubmit() {
     });
 
     const paymentDate = paymentDateInput.value;
-    const monthKey = paymentDate.slice(0, 7);
-
-    const monthNamesThai = [
-      "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-      "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
-    ];
-    const mIdx = parseInt(paymentDate.split("-")[1]) - 1;
-    const yearThai = parseInt(paymentDate.split("-")[0]) + 543;
-    const periodThai = `${monthNamesThai[mIdx]} ${yearThai}`;
+    const selPeriod = getSelectedPeriodLabel("periodMonth", "periodYear");
+    const monthKey = selPeriod.monthKey;
+    const yearThai = selPeriod.yearBe;
+    const periodThai = selPeriod.labelThai;
 
     const newPayment = {
-      id: `REC-${yearThai}-${paymentDate.split("-")[1]}-${String(appState.payments.length + 1).padStart(3, "0")}`,
+      id: `REC-${yearThai}-${String(selPeriod.month).padStart(2, "0")}-${String(appState.payments.length + 1).padStart(3, "0")}`,
       houseNo: houseSelect.value,
       ownerName: ownerNameInput.value.trim(),
       phone: phoneInput.value.trim(),
       feeType: feeType,
       period: periodThai,
+      periodMonth: selPeriod.month,
+      periodYear: selPeriod.yearAd,
       monthKey: monthKey,
       paymentDate: paymentDate,
       baseFee: baseFee,
@@ -4173,7 +4212,7 @@ function renderAdminUnpaid() {
       <td class="p-3 text-center font-medium text-slate-500">${idx + 1}</td>
       <td class="p-3 font-bold text-red-700 font-mono text-sm">${h.houseNo}</td>
       <td class="p-3 font-semibold text-slate-900">${h.ownerName || "เจ้าของบ้าน/ผู้พักอาศัย"}</td>
-      <td class="p-3 text-slate-600">พฤศจิกายน 2569</td>
+      <td class="p-3 text-slate-600">${getSelectedPeriodLabel("unpaidFilterMonth", "unpaidFilterYear").labelThai}</td>
       <td class="p-3 text-right font-mono text-slate-700">400.00</td>
       <td class="p-3 text-right font-mono text-red-600 font-medium">40.00</td>
       <td class="p-3 text-right font-mono font-bold text-red-700 text-sm">440.00</td>
@@ -4209,7 +4248,7 @@ function copyLineNotice(houseNo) {
 `🏡 [แจ้งเตือนค่าส่วนกลาง หมู่บ้านเดอะกรีน 2]
 เรียน: ${ownerName} (บ้านเลขที่ ${houseNo})
 
-นิติบุคคลหมู่บ้านจัดสรร เดอะกรีน 2 ขอแจ้งเตือนยอดค้างชำระค่าส่วนกลางประจำเดือน พฤศจิกายน 2569
+นิติบุคคลหมู่บ้านจัดสรร เดอะกรีน 2 ขอแจ้งเตือนยอดค้างชำระค่าส่วนกลางประจำเดือน ${getSelectedPeriodLabel("unpaidFilterMonth", "unpaidFilterYear").labelThai}
 รายละเอียด:
 • ค่าส่วนกลาง: 400 บาท
 • เงินเพิ่มกรณีเกินกำหนด (วันที่ 10): 40 บาท
@@ -4241,18 +4280,21 @@ async function quickMarkHousePaid(houseNo) {
   }
 
   house.status = "paid";
-  house.lastPaidMonth = "2026-11";
+  const curPeriodPaid = getSelectedPeriodLabel("unpaidFilterMonth", "unpaidFilterYear");
+  house.lastPaidMonth = curPeriodPaid.monthKey;
   house.outstandingMonths = [];
 
   // Create approved cash payment record
   const paymentRecord = {
-    id: `REC-2569-11-${String(appState.payments.length + 1).padStart(3, "0")}`,
+    id: `REC-${curPeriodPaid.yearBe}-${String(curPeriodPaid.month).padStart(2, "0")}-${String(appState.payments.length + 1).padStart(3, "0")}`,
     houseNo: houseNo,
     ownerName: house.ownerName,
     phone: house.phone,
     feeType: "monthly",
-    period: "พฤศจิกายน 2569",
-    monthKey: "2026-11",
+    period: curPeriodPaid.labelThai,
+    periodMonth: curPeriodPaid.month,
+    periodYear: curPeriodPaid.yearAd,
+    monthKey: curPeriodPaid.monthKey,
     paymentDate: new Date().toISOString().slice(0, 10),
     baseFee: 400,
     gateCardQty: 0,
@@ -4289,7 +4331,8 @@ function openA4NoticeModal(houseNo) {
   if (!modal) return;
 
   const runningNum = houseNo.replace(/[^0-9]/g, "").padStart(3, "0");
-  const docNo = `วส.ทก.2/2569/11-${runningNum}`;
+  const noticePeriod = getSelectedPeriodLabel("unpaidFilterMonth", "unpaidFilterYear");
+  const docNo = `วส.ทก.2/${noticePeriod.yearBe}/${String(noticePeriod.month).padStart(2, "0")}-${runningNum}`;
 
   const today = new Date();
   const day = today.getDate();
@@ -4311,7 +4354,7 @@ function openA4NoticeModal(houseNo) {
       <tr class="border-b border-slate-200">
         <td class="p-2 text-center text-slate-600">1</td>
         <td class="p-2 font-medium text-slate-900">
-          ค่าใช้จ่ายส่วนกลาง (บำรุงรักษาสาธารณูปโภค) ประจำเดือน พฤศจิกายน 2569
+          ค่าใช้จ่ายส่วนกลาง (บำรุงรักษาสาธารณูปโภค) ประจำเดือน ${noticePeriod.labelThai}
           <div class="text-[10px] text-slate-500">อัตราตามมติที่ประชุมใหญ่เจ้าของร่วม 400.00 บาท/เดือน</div>
         </td>
         <td class="p-2 text-right font-mono text-slate-800">400.00</td>
@@ -4381,7 +4424,8 @@ function batchPrintAllNotices() {
 
   unpaidHouses.forEach((house, index) => {
     const runningNum = house.houseNo.replace(/[^0-9]/g, "").padStart(3, "0");
-    const docNo = `วส.ทก.2/2569/11-${runningNum}`;
+    const noticePeriod = getSelectedPeriodLabel("unpaidFilterMonth", "unpaidFilterYear");
+  const docNo = `วส.ทก.2/${noticePeriod.yearBe}/${String(noticePeriod.month).padStart(2, "0")}-${runningNum}`;
     const qrDivId = `batchQrCode_${index}`;
 
     const pageDiv = document.createElement("div");
@@ -4459,7 +4503,7 @@ function batchPrintAllNotices() {
             <tr class="border-b border-slate-200">
               <td class="p-2 text-center text-slate-600">1</td>
               <td class="p-2 font-medium text-slate-900">
-                ค่าใช้จ่ายส่วนกลาง (บำรุงรักษาสาธารณูปโภค) ประจำเดือน พฤศจิกายน 2569
+                ค่าใช้จ่ายส่วนกลาง (บำรุงรักษาสาธารณูปโภค) ประจำเดือน ${noticePeriod.labelThai}
                 <div class="text-[10px] text-slate-500">อัตราตามมติที่ประชุมใหญ่เจ้าของร่วม 400.00 บาท/เดือน</div>
               </td>
               <td class="p-2 text-right font-mono text-slate-800">400.00</td>
@@ -4573,7 +4617,8 @@ function exportUnpaidHousesCsv() {
   csv += "ลำดับ,บ้านเลขที่,ชื่อเจ้าของ/ผู้พักอาศัย,เบอร์โทรศัพท์,งวดค้างชำระ,ค่าส่วนกลาง (บาท),ค่าปรับล่าช้า (บาท),รวมยอดค้างชำระ (บาท)\n";
 
   unpaidHouses.forEach((h, idx) => {
-    csv += `"${idx + 1}","${h.houseNo}","${h.ownerName || ""}","${h.phone || ""}","พฤศจิกายน 2569","400.00","40.00","440.00"\n`;
+    const csvPeriod = getSelectedPeriodLabel("unpaidFilterMonth", "unpaidFilterYear").labelThai;
+    csv += `"${idx + 1}","${h.houseNo}","${h.ownerName || ""}","${h.phone || ""}","${csvPeriod}","400.00","40.00","440.00"\n`;
   });
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -4649,7 +4694,7 @@ function renderReportContent() {
           <td class="p-2 text-center text-slate-600">${idx + 1}</td>
           <td class="p-2 font-bold text-red-700 font-mono">${h.houseNo}</td>
           <td class="p-2 font-medium text-slate-900">${h.ownerName}</td>
-          <td class="p-2 text-slate-600">พฤศจิกายน 2569</td>
+          <td class="p-2 text-slate-600">${getSelectedPeriodLabel("reportMonthSelect", "reportYearSelect").labelThai}</td>
           <td class="p-2 text-right font-mono text-slate-700">400.00</td>
           <td class="p-2 text-right font-mono text-red-600">40.00</td>
           <td class="p-2 text-right font-mono font-bold text-red-700">440.00</td>
@@ -4660,7 +4705,7 @@ function renderReportContent() {
     container.innerHTML = `
       <div class="mb-4 text-center">
         <h3 class="text-base font-bold text-slate-900">รายงานสรุปบ้านค้างชำระค่าส่วนกลาง นิติบุคคลหมู่บ้านเดอะกรีน 2</h3>
-        <p class="text-xs text-slate-500">ประจำงวด พฤศจิกายน 2569 • ข้อมูล ณ วันที่ ${new Date().toLocaleDateString("th-TH")}</p>
+        <p class="text-xs text-slate-500">ประจำงวด ${getSelectedPeriodLabel("reportMonthSelect", "reportYearSelect").labelThai} • ข้อมูล ณ วันที่ ${new Date().toLocaleDateString("th-TH")}</p>
       </div>
       <table class="w-full text-xs">
         <thead class="bg-slate-100 text-slate-800 border-b border-slate-300">
@@ -5070,9 +5115,10 @@ async function postToCloud(payload) {
 }
 
 async function syncPaymentToGoogleAppsScript(p) {
+  const cur = getCurrentMonthYear();
   const parts = (p.paymentDate || "").split("-");
-  const periodYear = parts.length >= 1 && parts[0] ? parseInt(parts[0]) : 2026;
-  const periodMonth = parts.length >= 2 && parts[1] ? parseInt(parts[1]) : 1;
+  const periodYear = p.periodYear || (parts.length >= 1 && parts[0] ? parseInt(parts[0], 10) : cur.yearAd);
+  const periodMonth = p.periodMonth || (parts.length >= 2 && parts[1] ? parseInt(parts[1], 10) : cur.month);
 
   return postToCloud({
     action: "createPayment",
@@ -5625,6 +5671,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Setup news slider
   initNewsSlider();
+
+  // Default all month/year selectors to current real-time month & year
+  initDefaultCurrentPeriod();
+  document.getElementById("unpaidFilterMonth")?.addEventListener("change", renderAdminUnpaid);
+  document.getElementById("unpaidFilterYear")?.addEventListener("change", renderAdminUnpaid);
+  document.getElementById("houseFilterPeriodMonth")?.addEventListener("change", renderAdminHouses);
+  document.getElementById("houseFilterPeriodYear")?.addEventListener("change", renderAdminHouses);
+  document.getElementById("reportMonthSelect")?.addEventListener("change", renderReportContent);
+  document.getElementById("reportYearSelect")?.addEventListener("change", renderReportContent);
 
   // Setup payment form
   initPaymentForm();
